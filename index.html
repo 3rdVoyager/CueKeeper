@@ -10,17 +10,17 @@
   <main class="app-shell">
     <section class="hero">
       <p class="eyebrow">CueKeeper</p>
-      <h1>Line memorization made easy.</h1>
+      <h1>The Two Noble Kinsmen</h1>
       <p class="hero-copy">
         Pick the role or roles you are practicing, read the cue, speak your line out loud or type it,
         and reveal the text when you want to check yourself.
       </p>
     </section>
 
-    <section class="layout">
-      <aside class="panel setup-panel">
+    <section id="layout" class="layout">
+      <aside id="setupPanel" class="panel setup-panel">
         <div class="panel-heading">
-          <h2>The Two Noble Kinsmen</h2>
+          <h2>Character Selection</h2>
         </div>
 
         <div class="control-group">
@@ -71,12 +71,8 @@
             <strong id="selectedRoleCount">0</strong>
           </article>
           <article class="stat-card">
-            <span class="stat-label">Practice Cards</span>
+            <span class="stat-label">Total Lines</span>
             <strong id="lineCount">0</strong>
-          </article>
-          <article class="stat-card">
-            <span class="stat-label">Directions Ignored</span>
-            <strong id="directionCount">0</strong>
           </article>
         </div>
       </aside>
@@ -84,7 +80,7 @@
       <section class="panel rehearsal-panel">
         <div class="rehearsal-header">
           <div>
-            <p id="sceneLabel" class="scene-label">Warmup deck</p>
+            <p id="sceneLabel" class="scene-label">Rehearsal deck</p>
             <h2 id="speakerLabel">Choose a character to begin</h2>
           </div>
           <div class="progress-group">
@@ -93,6 +89,15 @@
               <div id="progressFill" class="progress-fill"></div>
             </div>
           </div>
+        </div>
+
+        <div class="focus-bar">
+          <button id="toggleSetupBtn" class="ghost-button" type="button">Hide Character Selection Menu</button>
+        </div>
+
+        <div id="sceneStartBanner" class="scene-start-banner" hidden>
+          <p class="scene-start-label">New Scene</p>
+          <p id="sceneStartText" class="scene-start-text">This line opens the scene.</p>
         </div>
 
         <article class="script-card cue-card">
@@ -111,8 +116,65 @@
             <button id="revealBtn" class="secondary-button" type="button">Reveal Line</button>
           </div>
           <p id="lineText" class="line-text is-hidden">
-            Try the line from memory first. Reveal it when you want to check yourself.
+            Try the line from memory. Reveal it when you want to check yourself.
           </p>
+        </article>
+
+        <article class="script-card typing-card">
+          <div class="typing-header">
+            <p class="card-label">Typing Practice</p>
+            <label class="toggle-row typing-toggle" for="typingPracticeToggle">
+              <span>Enable typing checker</span>
+              <input id="typingPracticeToggle" type="checkbox">
+            </label>
+          </div>
+          <div id="typingPracticePanel" hidden>
+            <div class="checker-mode-row">
+              <label class="typing-label" for="checkerModeSelect">Checker mode</label>
+              <select id="checkerModeSelect" class="checker-mode-select" aria-label="Choose checker mode">
+                <option value="lenient">Lenient</option>
+                <option value="strict">Strict</option>
+              </select>
+            </div>
+            <label class="typing-label" for="typingInput">Type your line from memory</label>
+            <textarea
+              id="typingInput"
+              class="typing-input"
+              rows="5"
+              placeholder="Type the line here, then check how close it is."
+            ></textarea>
+            <div class="typing-actions">
+              <button id="checkTypingBtn" class="secondary-button" type="button">Check My Line</button>
+              <button id="clearTypingBtn" class="ghost-button" type="button">Clear</button>
+            </div>
+            <p id="typingFeedback" class="typing-feedback">Typing practice is off.</p>
+            <div id="accuracyHistoryPanel" class="history-panel" hidden>
+              <div class="history-header">
+                <p class="history-title">Accuracy History</p>
+                <button id="clearHistoryBtn" class="ghost-button" type="button">Clear History</button>
+              </div>
+              <div class="history-stats">
+                <p id="historyAverage" class="history-stat">Average: --</p>
+                <p id="historyCount" class="history-stat">Checks: 0</p>
+              </div>
+              <ul id="historyList" class="history-list"></ul>
+            </div>
+            <div id="reviewDeckPanel" class="history-panel" hidden>
+              <div class="history-header">
+                <p class="history-title">Missed Lines Review</p>
+                <button id="clearReviewDeckBtn" class="ghost-button" type="button">Clear Review Deck</button>
+              </div>
+              <div class="history-stats">
+                <p id="reviewDeckCount" class="history-stat">Lines waiting: 0</p>
+                <p id="reviewDeckMode" class="history-stat">Mode: Main deck</p>
+              </div>
+              <div class="typing-actions">
+                <button id="startReviewDeckBtn" class="secondary-button" type="button">Practice Missed Lines</button>
+                <button id="returnToMainDeckBtn" class="ghost-button" type="button" hidden>Return to Main Deck</button>
+              </div>
+              <p id="reviewDeckHint" class="typing-feedback">Low-scoring typed lines will be added here for extra review.</p>
+            </div>
+          </div>
         </article>
 
         <div class="button-row">
