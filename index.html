@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>CueKeeper Demo</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>CueKeeper: Line Memorization Demo</h1>
+
+<label for="characterSelect">Select Character(s):</label>
+<select id="characterSelect" multiple>
+  <option value="ARCITE">ARCITE</option>
+  <option value="PALAMON">PALAMON</option>
+  <option value="EMILIA">EMILIA</option>
+</select>
+<p>Hold Ctrl (or Cmd on Mac) to select multiple characters.</p>
+
+    <div class="lineDisplay">
+      <h2>Current Line:</h2>
+      <p id="lineDisplay">Select a character to start</p>
+    </div>
+
+    <div class="buttons">
+      <button id="nextBtn">Next Line</button>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
