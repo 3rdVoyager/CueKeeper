@@ -2,32 +2,108 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>CueKeeper Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CueKeeper Rehearsal Room</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="container">
-    <h1>CueKeeper: Line Memorization Demo</h1>
+  <main class="app-shell">
+    <section class="hero">
+      <p class="eyebrow">CueKeeper</p>
+      <h1>Line memorization made easy.</h1>
+      <p class="hero-copy">
+        Pick the role or roles you are practicing, read the cue, speak your line out loud,
+        and reveal the text only when you want to check yourself.
+      </p>
+    </section>
 
-<label for="characterSelect">Select Character(s):</label>
-<select id="characterSelect" multiple>
-  <option value="ARCITE">ARCITE</option>
-  <option value="PALAMON">PALAMON</option>
-  <option value="EMILIA">EMILIA</option>
-</select>
-<p>Hold Ctrl (or Cmd on Mac) to select multiple characters.</p>
+    <section class="layout">
+      <aside class="panel setup-panel">
+        <div class="panel-heading">
+          <h2>Practice Setup</h2>
+          <p>Your uploaded TNK PDF is in the project. This screen uses a hand-entered sample deck for now.</p>
+        </div>
 
-    <div class="lineDisplay">
-      <h2>Current Line:</h2>
-      <p id="lineDisplay">Select a character to start</p>
-    </div>
+        <div class="control-group">
+          <div class="group-label-row">
+            <h3>Choose Characters</h3>
+            <div class="tiny-actions">
+              <button id="selectAllBtn" class="ghost-button" type="button">Select All</button>
+              <button id="clearBtn" class="ghost-button" type="button">Clear</button>
+            </div>
+          </div>
+          <div id="characterFilters" class="character-grid"></div>
+        </div>
 
-    <div class="buttons">
-      <button id="nextBtn">Next Line</button>
-      <button id="restartBtn">Restart</button>
-    </div>
-  </div>
+        <div class="control-group">
+          <h3>Practice Options</h3>
+          <label class="toggle-row" for="showDirectionsToggle">
+            <span>Show nearby stage directions as context</span>
+            <input id="showDirectionsToggle" type="checkbox" checked>
+          </label>
+        </div>
 
+        <div class="stats-grid">
+          <article class="stat-card">
+            <span class="stat-label">Selected Roles</span>
+            <strong id="selectedRoleCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Practice Cards</span>
+            <strong id="lineCount">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Directions Ignored</span>
+            <strong id="directionCount">0</strong>
+          </article>
+        </div>
+      </aside>
+
+      <section class="panel rehearsal-panel">
+        <div class="rehearsal-header">
+          <div>
+            <p id="sceneLabel" class="scene-label">Warmup deck</p>
+            <h2 id="speakerLabel">Choose a character to begin</h2>
+          </div>
+          <div class="progress-group">
+            <p id="progressText" class="progress-text">0 of 0</p>
+            <div class="progress-bar" aria-hidden="true">
+              <div id="progressFill" class="progress-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <article class="script-card cue-card">
+          <p class="card-label">Cue</p>
+          <p id="cueSpeaker" class="speaker-tag">Waiting</p>
+          <p id="cueText" class="card-copy">Select one or more characters to build your rehearsal deck.</p>
+          <div id="stageDirectionBox" class="direction-box" hidden>
+            <p class="direction-label">Stage direction</p>
+            <p id="stageDirectionText"></p>
+          </div>
+        </article>
+
+        <article class="script-card line-card">
+          <div class="line-card-header">
+            <p class="card-label">Your Line</p>
+            <button id="revealBtn" class="secondary-button" type="button">Reveal Line</button>
+          </div>
+          <p id="lineText" class="line-text is-hidden">
+            Try the line from memory first. Reveal it only when you want to check yourself.
+          </p>
+        </article>
+
+        <div class="button-row">
+          <button id="restartBtn" class="ghost-button" type="button">Restart Deck</button>
+          <button id="nextBtn" class="primary-button" type="button">Next Cue</button>
+        </div>
+
+        <p class="keyboard-help">Keyboard shortcuts: <kbd>Space</kbd> reveal or hide, <kbd>Right Arrow</kbd> next cue, <kbd>R</kbd> restart.</p>
+      </section>
+    </section>
+  </main>
+
+  <script src="TNK.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

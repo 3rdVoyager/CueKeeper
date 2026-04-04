@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.0] - 2026-04-03
+### Added
+- Cue-based rehearsal interface with hidden-line practice flow
+- Character checkboxes with select-all and clear actions
+- Progress display and keyboard shortcuts
+- Structured script-entry format for future parser work
+- Optional stage-direction context box
+- Updated README with project-file explanations for VS Code users
+
 ## [0.1.0] - 2026-04-03
 ### Added
 - Basic test of features
