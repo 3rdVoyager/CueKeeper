@@ -7,7 +7,8 @@ All notable changes to this project will be documented in this file.
 - Cue-based rehearsal interface with hidden-line practice flow
 - Character checkboxes with select-all and clear actions
 - Progress display and keyboard shortcuts
-- Structured script-entry format for future parser work
+- Full embedded TNK script data extracted from the uploaded PDF
+- Full character directory for the demo
 - Optional stage-direction context box
 - Updated README with project-file explanations for VS Code users
 

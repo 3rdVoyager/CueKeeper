@@ -1,6 +1,26 @@
 const selectionStorageKey = "cuekeeper-selected-characters";
+const presetStorageKey = "cuekeeper-selected-preset";
+
+const castPresets = [
+  { actor: "Linnea Beukema", roles: ["PALAMON"] },
+  { actor: "Joshie Cheng", roles: ["ARTESIUS", "JAILER", "FOURTH COUNTRYMAN", "SCHOOLMASTER"] },
+  { actor: "Charlotte Convis", roles: ["EMILIA"] },
+  { actor: "Kailyn Forsythe", roles: ["ARCITE"] },
+  { actor: "John Paul Giorgis", roles: ["PIRITHOUS", "BROTHER"] },
+  { actor: "Izzy Hernandez", roles: ["FIRST QUEEN", "SECOND COUNTRYMAN", "MESSENGER"] },
+  { actor: "Gretta Keffer", roles: ["HIPPOLYTA"] },
+  { actor: "Marek Oszwaldowski", roles: ["THESEUS"] },
+  { actor: "Faith Peters", roles: ["SECOND QUEEN", "FIRST COUNTRYMAN", "WOMAN", "DOCTOR"] },
+  { actor: "Annelise Ricks", roles: ["THIRD QUEEN", "VALERIUS", "WOOER", "THIRD COUNTRYMAN", "SERVANT"] },
+  { actor: "Grace Treseler", roles: ["DAUGHTER"] }
+];
 
 const dom = {
+  castPresetSelect: document.getElementById("castPresetSelect"),
+  applyPresetBtn: document.getElementById("applyPresetBtn"),
+  presetSummary: document.getElementById("presetSummary"),
+  manualSelectionDetails: document.getElementById("manualSelectionDetails"),
+  manualSelectionHint: document.getElementById("manualSelectionHint"),
   characterFilters: document.getElementById("characterFilters"),
   showDirectionsToggle: document.getElementById("showDirectionsToggle"),
   selectedRoleCount: document.getElementById("selectedRoleCount"),
@@ -22,11 +42,14 @@ const dom = {
   clearBtn: document.getElementById("clearBtn")
 };
 
-const characters = getCharacters(scriptEntries);
+const characters = typeof characterDirectory !== "undefined"
+  ? [...characterDirectory]
+  : getCharacters(scriptEntries);
 const directionCount = scriptEntries.filter((entry) => entry.type === "direction").length;
 
 const appState = {
   selectedCharacters: loadSelectedCharacters(),
+  selectedPresetActor: loadSelectedPresetActor(),
   showDirections: true,
   rehearsalDeck: [],
   currentCardIndex: 0,
@@ -65,8 +88,37 @@ function loadSelectedCharacters() {
   }
 }
 
+function loadSelectedPresetActor() {
+  const savedPreset = localStorage.getItem(presetStorageKey);
+  return castPresets.some((preset) => preset.actor === savedPreset) ? savedPreset : "";
+}
+
 function persistSelectedCharacters() {
   localStorage.setItem(selectionStorageKey, JSON.stringify(appState.selectedCharacters));
+}
+
+function persistSelectedPresetActor() {
+  if (appState.selectedPresetActor) {
+    localStorage.setItem(presetStorageKey, appState.selectedPresetActor);
+    return;
+  }
+
+  localStorage.removeItem(presetStorageKey);
+}
+
+function getPresetByActor(actorName) {
+  return castPresets.find((preset) => preset.actor === actorName) ?? null;
+}
+
+function populatePresetSelect() {
+  castPresets.forEach((preset) => {
+    const option = document.createElement("option");
+    option.value = preset.actor;
+    option.textContent = preset.actor;
+    dom.castPresetSelect.append(option);
+  });
+
+  dom.castPresetSelect.value = appState.selectedPresetActor;
 }
 
 function findPreviousSpokenLine(startIndex) {
@@ -147,6 +199,9 @@ function renderCharacterFilters() {
     checkbox.setAttribute("aria-label", `Practice ${character}`);
 
     checkbox.addEventListener("change", () => {
+      appState.selectedPresetActor = "";
+      dom.castPresetSelect.value = "";
+
       if (checkbox.checked) {
         appState.selectedCharacters = [...appState.selectedCharacters, character];
       } else {
@@ -168,6 +223,23 @@ function renderStats() {
   dom.selectedRoleCount.textContent = appState.selectedCharacters.length.toString();
   dom.lineCount.textContent = appState.rehearsalDeck.length.toString();
   dom.directionCount.textContent = directionCount.toString();
+}
+
+function renderPresetSummary() {
+  const selectedPreset = getPresetByActor(appState.selectedPresetActor);
+
+  if (!selectedPreset) {
+    dom.presetSummary.textContent = "Manual mode: choose any characters below.";
+    return;
+  }
+
+  dom.presetSummary.textContent = `${selectedPreset.actor}: ${selectedPreset.roles.join(", ")}`;
+}
+
+function renderManualSelectionHint() {
+  dom.manualSelectionHint.textContent = dom.manualSelectionDetails.open
+    ? "Hide the full role list"
+    : "Show the full role list";
 }
 
 function renderCurrentCard() {
@@ -223,6 +295,7 @@ function renderCurrentCard() {
 
 function renderApp() {
   renderCharacterFilters();
+  renderPresetSummary();
   renderStats();
   renderCurrentCard();
 }
@@ -232,7 +305,21 @@ function resetDeck() {
   appState.currentCardIndex = 0;
   appState.isLineVisible = false;
   persistSelectedCharacters();
+  persistSelectedPresetActor();
   renderApp();
+}
+
+function applyPreset(actorName) {
+  const preset = getPresetByActor(actorName);
+
+  if (!preset) {
+    return;
+  }
+
+  appState.selectedPresetActor = preset.actor;
+  appState.selectedCharacters = preset.roles.filter((role) => characters.includes(role));
+  dom.castPresetSelect.value = preset.actor;
+  resetDeck();
 }
 
 function toggleLineVisibility() {
@@ -264,12 +351,34 @@ dom.revealBtn.addEventListener("click", toggleLineVisibility);
 dom.nextBtn.addEventListener("click", moveToNextCard);
 dom.restartBtn.addEventListener("click", restartDeck);
 
+dom.applyPresetBtn.addEventListener("click", () => {
+  if (!dom.castPresetSelect.value) {
+    appState.selectedPresetActor = "";
+    resetDeck();
+    return;
+  }
+
+  applyPreset(dom.castPresetSelect.value);
+});
+
+dom.castPresetSelect.addEventListener("change", () => {
+  appState.selectedPresetActor = dom.castPresetSelect.value;
+  persistSelectedPresetActor();
+  renderPresetSummary();
+});
+
+dom.manualSelectionDetails.addEventListener("toggle", renderManualSelectionHint);
+
 dom.selectAllBtn.addEventListener("click", () => {
+  appState.selectedPresetActor = "";
+  dom.castPresetSelect.value = "";
   appState.selectedCharacters = [...characters];
   resetDeck();
 });
 
 dom.clearBtn.addEventListener("click", () => {
+  appState.selectedPresetActor = "";
+  dom.castPresetSelect.value = "";
   appState.selectedCharacters = [];
   resetDeck();
 });
@@ -301,4 +410,10 @@ window.addEventListener("keydown", (event) => {
   }
 });
 
+populatePresetSelect();
+if (appState.selectedPresetActor) {
+  dom.castPresetSelect.value = appState.selectedPresetActor;
+  renderPresetSummary();
+}
+renderManualSelectionHint();
 resetDeck();

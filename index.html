@@ -12,33 +12,55 @@
       <p class="eyebrow">CueKeeper</p>
       <h1>Line memorization made easy.</h1>
       <p class="hero-copy">
-        Pick the role or roles you are practicing, read the cue, speak your line out loud,
-        and reveal the text only when you want to check yourself.
+        Pick the role or roles you are practicing, read the cue, speak your line out loud or type it,
+        and reveal the text when you want to check yourself.
       </p>
     </section>
 
     <section class="layout">
       <aside class="panel setup-panel">
         <div class="panel-heading">
-          <h2>Practice Setup</h2>
-          <p>Your uploaded TNK PDF is in the project. This screen uses a hand-entered sample deck for now.</p>
+          <h2>The Two Noble Kinsmen</h2>
         </div>
 
         <div class="control-group">
           <div class="group-label-row">
-            <h3>Choose Characters</h3>
-            <div class="tiny-actions">
-              <button id="selectAllBtn" class="ghost-button" type="button">Select All</button>
-              <button id="clearBtn" class="ghost-button" type="button">Clear</button>
-            </div>
+            <h3>Cast Presets</h3>
           </div>
-          <div id="characterFilters" class="character-grid"></div>
+          <p class="control-copy">Choose an actor to auto-select all of their rehearsal roles.</p>
+          <div class="preset-row">
+            <select id="castPresetSelect" class="preset-select" aria-label="Choose cast preset">
+              <option value="">Select an actor</option>
+            </select>
+            <button id="applyPresetBtn" class="secondary-button" type="button">Apply</button>
+          </div>
+          <p id="presetSummary" class="preset-summary">Manual mode: choose any characters below.</p>
         </div>
+
+        <details id="manualSelectionDetails" class="control-group accordion-group">
+          <summary class="accordion-summary">
+            <span>
+              <strong>Manual Character Selection</strong>
+              <small id="manualSelectionHint">Show the full role list</small>
+            </span>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </summary>
+          <div class="accordion-content">
+            <div class="group-label-row">
+              <h3>Choose Characters</h3>
+              <div class="tiny-actions">
+                <button id="selectAllBtn" class="ghost-button" type="button">Select All</button>
+                <button id="clearBtn" class="ghost-button" type="button">Clear</button>
+              </div>
+            </div>
+            <div id="characterFilters" class="character-grid"></div>
+          </div>
+        </details>
 
         <div class="control-group">
           <h3>Practice Options</h3>
           <label class="toggle-row" for="showDirectionsToggle">
-            <span>Show nearby stage directions as context</span>
+            <span>Show stage directions for context</span>
             <input id="showDirectionsToggle" type="checkbox" checked>
           </label>
         </div>
@@ -89,7 +111,7 @@
             <button id="revealBtn" class="secondary-button" type="button">Reveal Line</button>
           </div>
           <p id="lineText" class="line-text is-hidden">
-            Try the line from memory first. Reveal it only when you want to check yourself.
+            Try the line from memory first. Reveal it when you want to check yourself.
           </p>
         </article>
 

@@ -15,7 +15,7 @@ CueKeeper is a browser-based line memorization tool for actors. This version foc
 - `index.html`: page structure and button targets
 - `style.css`: layout, colors, spacing, and responsive design
 - `app.js`: app state, deck building, rendering, and button logic
-- `TNK.js`: temporary hand-entered sample data inspired by TNK
+- `TNK.js`: the embedded TNK script data and full character directory
 - `scripts/TNK - Final Script.pdf`: uploaded class script for future parsing work
 
 ## How To Open It In VS Code
@@ -30,10 +30,9 @@ CueKeeper is a browser-based line memorization tool for actors. This version foc
 - `R`: restart the deck
 
 ## Next Steps
-- Parse the uploaded PDF into structured entries
-- Detect character names automatically
-- Merge wrapped dialogue lines into single speeches
-- Ignore stage directions more intelligently
+- Clean up parser edge cases from the one-time PDF extraction
+- Merge wrapped dialogue lines into cleaner speeches where needed
+- Improve stage-direction cleanup
 - Save rehearsal progress per role or scene
 
 ## License
