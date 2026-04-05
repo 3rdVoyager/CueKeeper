@@ -1,3 +1,8 @@
+/* 
+  Global color and shape variables.
+  Most of the visual theme is controlled from here, so this is the best place
+  to tweak the app's palette, border radii, and overall feel.
+*/
 :root {
   --bg-top: #f5efe2;
   --bg-bottom: #e1d4bd;
@@ -16,6 +21,11 @@
   --radius-sm: 12px;
 }
 
+/* 
+  Dark-mode overrides.
+  The app does not load a separate stylesheet for dark mode;
+  it swaps these variables when <body> gets the "theme-dark" class.
+*/
 body.theme-dark {
   --bg-top: #13161d;
   --bg-bottom: #0b0d12;
@@ -31,10 +41,15 @@ body.theme-dark {
   --shadow: 0 20px 44px rgba(0, 0, 0, 0.34);
 }
 
+/* Basic reset so padding and borders behave predictably. */
 * {
   box-sizing: border-box;
 }
 
+/* 
+  Page background and default text styles.
+  The light theme uses a warm gradient, while dark mode overrides it below.
+*/
 body {
   margin: 0;
   min-height: 100vh;
@@ -45,12 +60,14 @@ body {
     linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
 }
 
+/* A simpler dark background that keeps some atmosphere without bright halos. */
 body.theme-dark {
   background:
     radial-gradient(circle at top, rgba(209, 122, 87, 0.08), transparent 34%),
     linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
 }
 
+/* Decorative grid overlay used only in light mode. */
 body::before {
   content: "";
   position: fixed;
@@ -63,16 +80,19 @@ body::before {
   mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.85), transparent);
 }
 
+/* The whole app lives inside this centered shell. */
 .app-shell {
   width: min(1180px, calc(100% - 32px));
   margin: 0 auto;
   padding: 28px 0 32px;
 }
 
+/* Top introduction block. */
 .hero {
   margin-bottom: 18px;
 }
 
+/* Title row with the small CueKeeper label on the left and theme button on the right. */
 .hero-topline {
   display: flex;
   align-items: center;
@@ -81,12 +101,14 @@ body::before {
   margin-bottom: 8px;
 }
 
+/* Theme toggle button sizing. */
 .theme-button {
   padding: 8px 12px;
   font-size: 0.88rem;
   white-space: nowrap;
 }
 
+/* Small uppercase brand label above the title. */
 .eyebrow {
   margin: 0 0 12px;
   font-size: 0.78rem;
@@ -96,6 +118,7 @@ body::before {
   color: var(--accent);
 }
 
+/* Heading font choices for the major headings. */
 h1,
 h2,
 h3 {
@@ -104,12 +127,14 @@ h3 {
   font-weight: 700;
 }
 
+/* Main script title sizing. */
 h1 {
   max-width: 12ch;
   font-size: clamp(2.15rem, 4.4vw, 3.8rem);
   line-height: 0.95;
 }
 
+/* Supporting description text under the title. */
 .hero-copy {
   max-width: 60ch;
   margin: 12px 0 0;
@@ -118,20 +143,24 @@ h1 {
   color: var(--text-soft);
 }
 
+/* Two-column app layout: sidebar on the left, rehearsal area on the right. */
 .layout {
   display: grid;
   grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
   gap: 16px;
 }
 
+/* Focus mode collapses the app down to one column. */
 .layout.is-focused {
   grid-template-columns: 1fr;
 }
 
+/* Hide the setup panel completely in focus mode. */
 .layout.is-focused .setup-panel {
   display: none;
 }
 
+/* Shared panel treatment for the sidebar and rehearsal area. */
 .panel {
   position: relative;
   overflow: hidden;
@@ -146,6 +175,7 @@ h1 {
     var(--shadow);
 }
 
+/* Decorative panel glow used in light mode only. */
 .panel::after {
   content: "";
   position: absolute;
@@ -157,6 +187,7 @@ h1 {
   background: radial-gradient(circle, rgba(197, 155, 83, 0.22), transparent 65%);
 }
 
+/* Turn off extra overlays in dark mode for a cleaner look. */
 body.theme-dark::before {
   display: none;
 }
@@ -165,6 +196,7 @@ body.theme-dark .panel::after {
   display: none;
 }
 
+/* Shared muted-text styling for helper labels and small copy. */
 .panel-heading p,
 .keyboard-help,
 .progress-text,
@@ -176,6 +208,7 @@ body.theme-dark .panel::after {
   color: var(--text-soft);
 }
 
+/* Shared line-height rules for readable paragraph text. */
 .panel-heading p,
 .keyboard-help,
 .toggle-row,
@@ -184,22 +217,26 @@ body.theme-dark .panel::after {
   line-height: 1.6;
 }
 
+/* Generic grouped control wrapper used inside the sidebar. */
 .control-group {
   position: relative;
   z-index: 1;
   margin-top: 24px;
 }
 
+/* Sidebar column layout. */
 .setup-panel {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
+/* Remove extra top margin when control groups are already stacked in the sidebar. */
 .setup-panel .control-group {
   margin-top: 0;
 }
 
+/* Top-level accordion block in the sidebar. */
 .sidebar-section {
   position: relative;
   z-index: 1;
@@ -208,6 +245,7 @@ body.theme-dark .panel::after {
   gap: 8px;
 }
 
+/* Visual styling for each accordion shell. */
 .sidebar-accordion {
   overflow: hidden;
   border: 1px solid rgba(91, 61, 42, 0.12);
@@ -219,14 +257,17 @@ body.theme-dark .panel::after {
     inset 0 -1px 0 rgba(91, 61, 42, 0.14);
 }
 
+/* Summary row at the top of each accordion. */
 .sidebar-section-summary {
   padding: 10px 12px;
 }
 
+/* Keep summary helper text from stretching too wide. */
 .sidebar-section-summary small {
   max-width: 28ch;
 }
 
+/* Inner body area that appears when an accordion opens. */
 .sidebar-section-body {
   display: flex;
   flex-direction: column;
@@ -234,17 +275,20 @@ body.theme-dark .panel::after {
   padding: 0 10px 10px;
 }
 
+/* Optional stacked section heading pattern. */
 .section-header {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* Small heading size inside cards. */
 .section-header h3,
 .section-card h4 {
   font-size: 0.98rem;
 }
 
+/* Secondary paragraph text inside cards. */
 .section-copy {
   margin: 0;
   color: var(--text-soft);
@@ -252,6 +296,7 @@ body.theme-dark .panel::after {
   line-height: 1.42;
 }
 
+/* Reusable inner card used throughout the sidebar. */
 .section-card {
   padding: 10px;
   border: 1px solid rgba(91, 61, 42, 0.12);
@@ -263,11 +308,13 @@ body.theme-dark .panel::after {
     inset 0 -1px 0 rgba(91, 61, 42, 0.14);
 }
 
+/* Compact card removes extra padding when child rows already control spacing. */
 .compact-card {
   padding: 0;
   overflow: hidden;
 }
 
+/* Muted text blocks used under controls and preset summaries. */
 .control-copy,
 .preset-summary {
   margin: 8px 0 0;
@@ -275,11 +322,13 @@ body.theme-dark .panel::after {
   line-height: 1.4;
 }
 
+/* Nested accordion look used for manual character selection. */
 .accordion-group {
   overflow: hidden;
   background: rgba(255, 255, 255, 0.45);
 }
 
+/* Shared summary-row layout for both top-level and nested accordions. */
 .accordion-summary {
   display: flex;
   align-items: center;
@@ -290,14 +339,17 @@ body.theme-dark .panel::after {
   list-style: none;
 }
 
+/* Hide the browser's default disclosure triangle so we can use our own icon. */
 .accordion-summary::-webkit-details-marker {
   display: none;
 }
 
+/* Strong title within a summary row. */
 .accordion-summary strong {
   display: block;
 }
 
+/* Small helper text within a summary row. */
 .accordion-summary small {
   display: block;
   margin-top: 2px;
@@ -305,6 +357,7 @@ body.theme-dark .panel::after {
   font-size: 0.82rem;
 }
 
+/* Circular plus/minus icon on accordion summaries. */
 .accordion-icon {
   display: inline-flex;
   align-items: center;
@@ -594,6 +647,10 @@ body.theme-dark .panel::after {
   margin-bottom: 10px;
 }
 
+.filter-row {
+  padding: 8px 10px 2px;
+}
+
 .checker-mode-select {
   width: 100%;
   min-height: 40px;
@@ -848,6 +905,14 @@ body.theme-dark .typing-card {
 
 body.theme-dark .speaking-card {
   background: linear-gradient(180deg, rgba(27, 32, 43, 0.96), rgba(20, 25, 35, 0.96));
+}
+
+body.theme-dark .scene-start-banner {
+  border-color: rgba(164, 179, 207, 0.16);
+  background: linear-gradient(180deg, rgba(28, 33, 45, 0.94), rgba(19, 24, 34, 0.92));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.42);
 }
 
 body.theme-dark .sidebar-accordion,

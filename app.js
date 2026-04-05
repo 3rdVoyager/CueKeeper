@@ -1,3 +1,8 @@
+// This file is the main controller for the rehearsal app.
+// It connects the script data, the HTML, and the user's actions.
+// If you ever need to debug behavior, this is the first file to inspect.
+
+// Cast presets map one actor name to the role labels used by the embedded script data.
 const castPresets = [
   { actor: "Linnea Beukema", roles: ["PALAMON"] },
   { actor: "Joshie Cheng", roles: ["ARTESIUS", "JAILER", "FOURTH COUNTRYMAN", "SCHOOLMASTER"] },
@@ -12,9 +17,12 @@ const castPresets = [
   { actor: "Grace Treseler", roles: ["DAUGHTER"] }
 ];
 
+// This is the localStorage key for the saved session snapshot.
 const storageKey = "cuekeeper-session-v1";
+// Cap the number of saved scoring records so storage stays lightweight and reliable.
 const maxAccuracyHistoryEntries = 200;
 
+// Cache important HTML elements once so the rest of the file can reuse them quickly.
 const dom = {
   layout: document.getElementById("layout"),
   themeToggleBtn: document.getElementById("themeToggleBtn"),
@@ -25,6 +33,7 @@ const dom = {
   manualSelectionDetails: document.getElementById("manualSelectionDetails"),
   manualSelectionHint: document.getElementById("manualSelectionHint"),
   characterFilters: document.getElementById("characterFilters"),
+  sceneFilterSelect: document.getElementById("sceneFilterSelect"),
   showDirectionsToggle: document.getElementById("showDirectionsToggle"),
   speakingPracticeToggle: document.getElementById("speakingPracticeToggle"),
   sceneLabel: document.getElementById("sceneLabel"),
@@ -67,15 +76,23 @@ const dom = {
   clearBtn: document.getElementById("clearBtn")
 };
 
+// Prefer the curated role list from TNK.js when available.
+// If that list is missing, derive speakers from the spoken script entries.
 const characters = typeof characterDirectory !== "undefined"
   ? [...characterDirectory]
   : getCharacters(scriptEntries);
 
+// Build the act/scene dropdown options once from the script.
+const sceneOptions = getSceneOptions(scriptEntries);
+
+// This returns a brand-new copy of the app's default state.
+// Resetting the app means replacing the current state with this shape.
 function createDefaultState() {
   return {
     selectedCharacters: [],
     selectedPresetActor: "",
     isDarkMode: false,
+    sceneFilter: "all",
     showDirections: true,
     speakingPracticeEnabled: false,
     speakingSelections: {},
@@ -92,14 +109,18 @@ function createDefaultState() {
   };
 }
 
+// appState is the single source of truth for the current session.
 const appState = createDefaultState();
 
+// Keep the form controls in sync with the default state before the first render.
 dom.showDirectionsToggle.checked = appState.showDirections;
 dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
 dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
 dom.checkerModeSelect.value = appState.checkerMode;
 dom.reviewRangeSelect.value = appState.reviewRange;
+dom.sceneFilterSelect.value = appState.sceneFilter;
 
+// Extract a unique speaker list from spoken lines only.
 function getCharacters(entries) {
   return [...new Set(
     entries
@@ -108,16 +129,50 @@ function getCharacters(entries) {
   )];
 }
 
+// Convert the script's scene order into dropdown options:
+// ACT 1, then ACT 1 Scene 1, ACT 1 Scene 2, and so on.
+function getSceneOptions(entries) {
+  const scenes = [...new Set(entries.map((entry) => entry.scene).filter(Boolean))];
+  const orderedOptions = [];
+  let currentAct = "";
+
+  scenes.forEach((scene) => {
+    const act = scene.split(" Scene ")[0];
+
+    if (act && act !== currentAct) {
+      orderedOptions.push({
+        type: "act",
+        value: act,
+        label: act
+      });
+      currentAct = act;
+    }
+
+    orderedOptions.push({
+      type: "scene",
+      value: scene,
+      label: `  ${scene}`
+    });
+  });
+
+  return {
+    orderedOptions
+  };
+}
+
+// Count how many spoken lines belong to one role.
 function countLinesForCharacter(character) {
   return scriptEntries.filter(
     (entry) => entry.type === "line" && entry.speaker === character
   ).length;
 }
 
+// Find the preset record for one actor.
 function getPresetByActor(actorName) {
   return castPresets.find((preset) => preset.actor === actorName) ?? null;
 }
 
+// Keep only the newest saved accuracy entries.
 function pruneAccuracyHistory(history) {
   if (!Array.isArray(history)) {
     return [];
@@ -126,6 +181,7 @@ function pruneAccuracyHistory(history) {
   return history.slice(-maxAccuracyHistoryEntries);
 }
 
+// Validate and normalize one saved accuracy entry from localStorage.
 function normalizeAccuracyEntry(entry) {
   if (!entry || typeof entry !== "object" || typeof entry.score !== "number") {
     return null;
@@ -157,11 +213,13 @@ function normalizeAccuracyEntry(entry) {
   };
 }
 
+// Build the exact subset of appState that is safe and useful to save.
 function getSerializableState() {
   return {
     selectedCharacters: appState.selectedCharacters,
     selectedPresetActor: appState.selectedPresetActor,
     isDarkMode: appState.isDarkMode,
+    sceneFilter: appState.sceneFilter,
     showDirections: appState.showDirections,
     speakingPracticeEnabled: appState.speakingPracticeEnabled,
     speakingSelections: appState.speakingSelections,
@@ -177,10 +235,12 @@ function getSerializableState() {
   };
 }
 
+// Write the current session snapshot to localStorage.
 function saveState() {
   localStorage.setItem(storageKey, JSON.stringify(getSerializableState()));
 }
 
+// Restore a saved session while validating every field.
 function applySavedState(savedState) {
   const defaultState = createDefaultState();
   Object.assign(appState, defaultState);
@@ -200,6 +260,13 @@ function applySavedState(savedState) {
 
   if (typeof savedState.showDirections === "boolean") {
     appState.showDirections = savedState.showDirections;
+  }
+
+  if (
+    savedState.sceneFilter === "all" ||
+    sceneOptions.orderedOptions.some((item) => item.value === savedState.sceneFilter)
+  ) {
+    appState.sceneFilter = savedState.sceneFilter;
   }
 
   if (typeof savedState.isDarkMode === "boolean") {
@@ -268,6 +335,7 @@ function applySavedState(savedState) {
   }
 }
 
+// Read the saved session from localStorage and apply it if it is valid JSON.
 function loadSavedState() {
   const rawState = localStorage.getItem(storageKey);
 
@@ -282,10 +350,12 @@ function loadSavedState() {
   }
 }
 
+// Clear temporary UI fields that should not carry across cards.
 function clearTransientUi() {
   dom.typingInput.value = "";
 }
 
+// For review mode, keep the lowest score recorded for each line.
 function getReviewableScoresByLine() {
   const reviewable = new Map();
 
@@ -304,6 +374,7 @@ function getReviewableScoresByLine() {
   return reviewable;
 }
 
+// Decide whether one numeric score belongs in the selected review range.
 function scoreMatchesRange(score, range) {
   if (range === "below-50") {
     return score < 50;
@@ -328,6 +399,7 @@ function scoreMatchesRange(score, range) {
   return score < 75;
 }
 
+// Switch accordion icons between + and - based on whether each details block is open.
 function renderAccordionIcons() {
   document.querySelectorAll("details").forEach((detailsElement) => {
     const icon = detailsElement.querySelector(":scope > summary .accordion-icon");
@@ -340,11 +412,13 @@ function renderAccordionIcons() {
   });
 }
 
+// Apply the current theme to the page and update the theme toggle label.
 function renderTheme() {
   document.body.classList.toggle("theme-dark", appState.isDarkMode);
   dom.themeToggleBtn.textContent = appState.isDarkMode ? "Light Mode" : "Dark Mode";
 }
 
+// Start over from a fresh session while preserving the user's theme preference.
 function resetSession() {
   const preservedDarkMode = appState.isDarkMode;
   Object.assign(appState, createDefaultState());
@@ -355,6 +429,7 @@ function resetSession() {
   dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
   dom.checkerModeSelect.value = appState.checkerMode;
   dom.reviewRangeSelect.value = appState.reviewRange;
+  dom.sceneFilterSelect.value = appState.sceneFilter;
   dom.manualSelectionDetails.open = false;
   clearTransientUi();
   localStorage.removeItem(storageKey);
@@ -362,6 +437,7 @@ function resetSession() {
   rebuildDeckFromState();
 }
 
+// Fill the cast preset dropdown from the castPresets array.
 function populatePresetSelect() {
   castPresets.forEach((preset) => {
     const option = document.createElement("option");
@@ -373,6 +449,32 @@ function populatePresetSelect() {
   dom.castPresetSelect.value = appState.selectedPresetActor;
 }
 
+// Fill the act/scene dropdown from sceneOptions.
+function populateSceneFilterSelect() {
+  sceneOptions.orderedOptions.forEach((item) => {
+    const option = document.createElement("option");
+    option.value = item.value;
+    option.textContent = item.label;
+    dom.sceneFilterSelect.append(option);
+  });
+
+  dom.sceneFilterSelect.value = appState.sceneFilter;
+}
+
+// Return true only if an entry belongs in the current act/scene selection.
+function entryMatchesSceneFilter(entry) {
+  if (appState.sceneFilter === "all") {
+    return true;
+  }
+
+  if (entry.scene === appState.sceneFilter) {
+    return true;
+  }
+
+  return entry.scene.startsWith(`${appState.sceneFilter} `);
+}
+
+// Find the spoken cue immediately before the current line.
 function findPreviousSpokenLine(startIndex) {
   for (let index = startIndex - 1; index >= 0; index -= 1) {
     const entry = scriptEntries[index];
@@ -385,6 +487,7 @@ function findPreviousSpokenLine(startIndex) {
   return null;
 }
 
+// Check whether this line is the first spoken line in its scene.
 function isFirstSpokenLineInScene(startIndex) {
   const currentEntry = scriptEntries[startIndex];
 
@@ -403,6 +506,7 @@ function isFirstSpokenLineInScene(startIndex) {
   return true;
 }
 
+// Gather stage directions that appear right before a spoken line.
 function collectNearbyDirections(startIndex) {
   const directions = [];
 
@@ -421,9 +525,14 @@ function collectNearbyDirections(startIndex) {
   return directions;
 }
 
+// Turn the selected characters into a rehearsal deck of cue cards.
 function buildRehearsalDeck(selectedCharacters) {
   return scriptEntries.flatMap((entry, index) => {
-    if (entry.type !== "line" || !selectedCharacters.includes(entry.speaker)) {
+    if (
+      entry.type !== "line" ||
+      !selectedCharacters.includes(entry.speaker) ||
+      !entryMatchesSceneFilter(entry)
+    ) {
       return [];
     }
 
@@ -444,6 +553,7 @@ function buildRehearsalDeck(selectedCharacters) {
   });
 }
 
+// Build a smaller deck from saved accuracy results instead of all selected lines.
 function buildReviewDeck() {
   const reviewableIds = [...getReviewableScoresByLine().values()]
     .filter((entry) => scoreMatchesRange(entry.score, appState.reviewRange))
@@ -457,6 +567,11 @@ function buildReviewDeck() {
     }
 
     const entry = scriptEntries[match];
+
+    if (!entryMatchesSceneFilter(entry)) {
+      return [];
+    }
+
     const cue = findPreviousSpokenLine(match);
 
     return [{
@@ -474,6 +589,7 @@ function buildReviewDeck() {
   });
 }
 
+// Rebuild the manual role checklist every render so the selected styles stay accurate.
 function renderCharacterFilters() {
   dom.characterFilters.innerHTML = "";
 
@@ -500,12 +616,15 @@ function renderCharacterFilters() {
     checkbox.setAttribute("aria-label", `Practice ${character}`);
 
     checkbox.addEventListener("change", () => {
+      // Choosing manual roles cancels the preset, because the selection is now custom.
       appState.selectedPresetActor = "";
       dom.castPresetSelect.value = "";
 
       if (checkbox.checked) {
+        // Add this role to the selected list.
         appState.selectedCharacters = [...appState.selectedCharacters, character];
       } else {
+        // Remove this role from the selected list.
         appState.selectedCharacters = appState.selectedCharacters.filter(
           (selectedCharacter) => selectedCharacter !== character
         );
@@ -520,6 +639,7 @@ function renderCharacterFilters() {
   });
 }
 
+// Show a short summary of the currently selected cast preset.
 function renderPresetSummary() {
   const selectedPreset = getPresetByActor(appState.selectedPresetActor);
 
@@ -533,12 +653,14 @@ function renderPresetSummary() {
   dom.presetSummary.textContent = `Roles: ${selectedPreset.roles.join(", ")}`;
 }
 
+// Update the helper text under the manual-selection accordion.
 function renderManualSelectionHint() {
   dom.manualSelectionHint.textContent = dom.manualSelectionDetails.open
     ? "Hide the full role list"
     : "Show the full role list";
 }
 
+// Hide or show the sidebar when focus mode is toggled.
 function renderFocusMode() {
   dom.layout.classList.toggle("is-focused", appState.isFocusMode);
   dom.toggleSetupBtn.textContent = appState.isFocusMode
@@ -546,6 +668,7 @@ function renderFocusMode() {
     : "Hide Menu";
 }
 
+// Lowercase and strip punctuation so typing checks can compare text more fairly.
 function normalizeForComparison(text) {
   return text
     .toLowerCase()
@@ -554,6 +677,7 @@ function normalizeForComparison(text) {
     .trim();
 }
 
+// Normalize old-style contractions and similar spellings into a friendlier comparison form.
 function canonicalizeToken(token) {
   let normalized = token.toLowerCase();
 
@@ -588,6 +712,7 @@ function canonicalizeToken(token) {
   return normalized;
 }
 
+// Split one line into normalized word-like tokens for scoring.
 function tokenizeForComparison(text) {
   return normalizeForComparison(text)
     .split(" ")
@@ -595,6 +720,7 @@ function tokenizeForComparison(text) {
     .filter(Boolean);
 }
 
+// Standard edit-distance helper used for fuzzy word matching.
 function levenshteinDistance(left, right) {
   const rows = left.length + 1;
   const cols = right.length + 1;
@@ -622,6 +748,7 @@ function levenshteinDistance(left, right) {
   return matrix[left.length][right.length];
 }
 
+// Allow small spelling differences or obvious partial forms to count as "close enough."
 function tokensRoughlyMatch(left, right) {
   if (!left || !right) {
     return false;
@@ -639,6 +766,7 @@ function tokensRoughlyMatch(left, right) {
   return distance <= 1;
 }
 
+// Longest common subsequence gives partial credit when words appear in the right general order.
 function getLcsLength(leftTokens, rightTokens) {
   const rows = leftTokens.length + 1;
   const cols = rightTokens.length + 1;
@@ -657,6 +785,7 @@ function getLcsLength(leftTokens, rightTokens) {
   return matrix[leftTokens.length][rightTokens.length];
 }
 
+// Show or hide the typing practice UI and keep its controls in sync with state.
 function renderTypingPractice() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
   const hasCards = Boolean(currentCard);
@@ -685,6 +814,7 @@ function renderTypingPractice() {
   }
 }
 
+// Show or hide the speaking practice UI and highlight the chosen speaking score button.
 function renderSpeakingPractice() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
   const hasCards = Boolean(currentCard);
@@ -700,6 +830,7 @@ function renderSpeakingPractice() {
   });
 }
 
+// Update the visible session summary stats derived from the saved accuracy history.
 function renderAccuracyHistory() {
   const history = appState.accuracyHistory;
   const hasHistory = history.length > 0;
@@ -725,6 +856,7 @@ function renderAccuracyHistory() {
   dom.historyCount.textContent = `Checks: ${history.length}`;
 }
 
+// Update the review tools area, including how many lines match the chosen score range.
 function renderReviewDeckPanel() {
   const analyticsEnabled = appState.typingPracticeEnabled || appState.speakingPracticeEnabled;
   const reviewCount = buildReviewDeck().length;
@@ -741,11 +873,13 @@ function renderReviewDeckPanel() {
     : "Use the selected range to build a focused review deck from saved checks.";
 }
 
+// Render the currently active rehearsal card, or the empty-state message if there is no deck yet.
 function renderCurrentCard() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
   const hasCards = Boolean(currentCard);
 
   if (!hasCards) {
+    // Empty state: either no roles are selected yet, or the current filters produced no cards.
     dom.sceneLabel.textContent = "Rehearsal deck";
     dom.speakerLabel.textContent = "Choose a character to begin";
     dom.progressText.textContent = "0 of 0";
@@ -785,10 +919,12 @@ function renderCurrentCard() {
   dom.stageDirectionText.textContent = currentCard.stageDirections.join(" ");
 
   if (appState.isLineVisible) {
+    // Revealed state: show the exact script line.
     dom.lineText.textContent = currentCard.lineText;
     dom.lineText.classList.remove("is-hidden");
     dom.revealBtn.textContent = "Hide Line";
   } else {
+    // Hidden state: encourage recall before showing the answer.
     dom.lineText.textContent = "Speak or type the line from memory. Reveal it after you try.";
     dom.lineText.classList.add("is-hidden");
     dom.revealBtn.textContent = "Reveal Line";
@@ -801,6 +937,7 @@ function renderCurrentCard() {
   renderTypingPractice();
 }
 
+// Render the whole interface from current state.
 function renderApp() {
   renderTheme();
   renderFocusMode();
@@ -812,6 +949,7 @@ function renderApp() {
   renderReviewDeckPanel();
 }
 
+// Rebuild the current deck from state and jump back to the first card.
 function resetDeck() {
   appState.rehearsalDeck = appState.activeDeckMode === "review"
     ? buildReviewDeck()
@@ -824,6 +962,7 @@ function resetDeck() {
   saveState();
 }
 
+// Rebuild the deck after loading saved state while trying to preserve the saved card index.
 function rebuildDeckFromState() {
   appState.rehearsalDeck = appState.activeDeckMode === "review"
     ? buildReviewDeck()
@@ -841,6 +980,7 @@ function rebuildDeckFromState() {
   saveState();
 }
 
+// Apply one preset actor by replacing the selected character list with that actor's roles.
 function applyPreset(actorName) {
   const preset = getPresetByActor(actorName);
 
@@ -854,6 +994,7 @@ function applyPreset(actorName) {
   resetDeck();
 }
 
+// Toggle whether the answer line is hidden or visible.
 function toggleLineVisibility() {
   if (appState.rehearsalDeck.length === 0) {
     return;
@@ -864,6 +1005,7 @@ function toggleLineVisibility() {
   saveState();
 }
 
+// Advance to the next cue card and clear temporary input from the previous one.
 function moveToNextCard() {
   if (appState.currentCardIndex >= appState.rehearsalDeck.length - 1) {
     return;
@@ -877,6 +1019,7 @@ function moveToNextCard() {
   saveState();
 }
 
+// Jump back to the start of the current deck.
 function restartDeck() {
   appState.currentCardIndex = 0;
   appState.isLineVisible = false;
@@ -886,6 +1029,8 @@ function restartDeck() {
   saveState();
 }
 
+// Save one accuracy result from typing or speaking.
+// Returning false means this exact attempt was already saved and should not be duplicated.
 function recordAccuracy(score, currentCard, attemptKey, source = "typing") {
   const checkKey = JSON.stringify({
     lineId: currentCard.id,
@@ -916,6 +1061,7 @@ function recordAccuracy(score, currentCard, attemptKey, source = "typing") {
   return true;
 }
 
+// Speaking practice keeps one saved score per line and updates it if the user changes their mind.
 function upsertSpeakingAccuracy(score, currentCard) {
   const existingIndex = appState.accuracyHistory.findIndex((entry) => (
     entry.source === "speaking" && entry.lineId === currentCard.id
@@ -943,6 +1089,8 @@ function upsertSpeakingAccuracy(score, currentCard) {
   saveState();
 }
 
+// Score the typed answer against the current script line.
+// Strict mode rewards exact order from the start; lenient mode gives partial credit.
 function checkTypedLine() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
 
@@ -961,6 +1109,7 @@ function checkTypedLine() {
   }
 
   if (typed === expected) {
+    // Fast path: a perfect normalized match always scores 100%.
     dom.typingFeedback.textContent = "Perfect match. Nice work.";
     if (!recordAccuracy(100, currentCard, typed, "typing")) {
       dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
@@ -969,6 +1118,7 @@ function checkTypedLine() {
   }
 
   if (appState.checkerMode === "strict") {
+    // Strict mode only counts matching words from the opening sequence.
     const typedWords = typed.split(" ").filter(Boolean);
     const expectedWords = expected.split(" ").filter(Boolean);
     let matchingWords = 0;
@@ -1000,6 +1150,7 @@ function checkTypedLine() {
     return;
   }
 
+  // Lenient mode combines opening accuracy, sequence overlap, and length penalty.
   const typedWords = typedTokens;
   const expectedWords = expectedTokens;
   let matchingWords = 0;
@@ -1037,6 +1188,7 @@ function checkTypedLine() {
   }
 }
 
+// Save the user's speaking self-score for the current line.
 function recordSpeakingAttempt(score) {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
 
@@ -1079,6 +1231,11 @@ dom.typingPracticeToggle.addEventListener("change", () => {
   renderAccuracyHistory();
   renderReviewDeckPanel();
   saveState();
+});
+dom.sceneFilterSelect.addEventListener("change", () => {
+  appState.sceneFilter = dom.sceneFilterSelect.value;
+  appState.activeDeckMode = "main";
+  resetDeck();
 });
 dom.reviewRangeSelect.addEventListener("change", () => {
   appState.reviewRange = dom.reviewRangeSelect.value;
@@ -1218,12 +1375,14 @@ window.addEventListener("keydown", (event) => {
 });
 
 populatePresetSelect();
+populateSceneFilterSelect();
 loadSavedState();
 dom.showDirectionsToggle.checked = appState.showDirections;
 dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
 dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
 dom.checkerModeSelect.value = appState.checkerMode;
 dom.reviewRangeSelect.value = appState.reviewRange;
+dom.sceneFilterSelect.value = appState.sceneFilter;
 dom.castPresetSelect.value = appState.selectedPresetActor;
 renderManualSelectionHint();
 renderAccordionIcons();

@@ -7,7 +7,17 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!--
+    The page has two main visual layers:
+    1. a top "hero" section with the title and theme toggle,
+    2. a two-column layout with the setup menu on the left and rehearsal UI on the right.
+  -->
   <main class="app-shell">
+    <!--
+      Hero section:
+      This is the introduction area at the top of the app.
+      It holds the project title, a short explanation, and the dark/light mode button.
+    -->
     <section class="hero">
       <div class="hero-topline">
         <p class="eyebrow">CueKeeper</p>
@@ -20,13 +30,25 @@
       </p>
     </section>
 
+    <!--
+      Main application layout:
+      The left side is the setup sidebar.
+      The right side is the active rehearsal area.
+      JS can add the "is-focused" class here to hide the sidebar.
+    -->
     <section id="layout" class="layout">
+      <!--
+        Setup sidebar:
+        This is where the user chooses roles, scenes, modes, and review options.
+        Each top-level area is wrapped in a <details> accordion.
+      -->
       <aside id="setupPanel" class="panel setup-panel">
         <div class="panel-heading">
           <h2>Practice Setup</h2>
           <p>Choose roles, tune rehearsal options, and keep your typing progress in one place.</p>
         </div>
 
+        <!-- Character Selection: preset actor dropdown plus manual role checklist. -->
         <details class="sidebar-section sidebar-accordion">
           <summary class="accordion-summary sidebar-section-summary">
             <span>
@@ -36,6 +58,7 @@
             <span class="accordion-icon" aria-hidden="true">+</span>
           </summary>
           <div class="sidebar-section-body">
+            <!-- Preset picker: one actor can map to multiple roles in the script. -->
             <div class="control-group section-card">
               <div class="group-label-row">
                 <h4>Cast Presets</h4>
@@ -49,6 +72,10 @@
               <p id="presetSummary" class="preset-summary" hidden></p>
             </div>
 
+            <!--
+              Manual role picker:
+              This nested accordion stays collapsed by default because the full role list is long.
+            -->
             <details id="manualSelectionDetails" class="control-group accordion-group section-card">
               <summary class="accordion-summary">
                 <span>
@@ -71,6 +98,32 @@
           </div>
         </details>
 
+        <!--
+          Act / Scene Navigation:
+          This dropdown does not change the script data itself.
+          It only filters which lines are used to build the current rehearsal deck.
+        -->
+        <details class="sidebar-section sidebar-accordion">
+          <summary class="accordion-summary sidebar-section-summary">
+            <span>
+              <strong>Act / Scene Navigation</strong>
+              <small>Jump into a whole act or a single scene.</small>
+            </span>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </summary>
+          <div class="sidebar-section-body">
+            <div class="section-card compact-card">
+              <div class="filter-row">
+                <label class="typing-label" for="sceneFilterSelect">Act / Scene Filter</label>
+                <select id="sceneFilterSelect" class="checker-mode-select" aria-label="Choose act or scene filter">
+                  <option value="all">Full Script</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <!-- Session Settings: optional helpers and practice modes. -->
         <details class="sidebar-section sidebar-accordion">
           <summary class="accordion-summary sidebar-section-summary">
             <span>
@@ -81,6 +134,10 @@
           </summary>
           <div class="sidebar-section-body">
             <div class="section-card compact-card">
+              <!--
+                These toggles turn major features on and off.
+                JS listens for their changes and redraws the rehearsal area.
+              -->
               <label class="toggle-row" for="showDirectionsToggle">
                 <span>Show stage directions for context</span>
                 <input id="showDirectionsToggle" type="checkbox" checked>
@@ -97,6 +154,11 @@
           </div>
         </details>
 
+        <!--
+          Review / Accuracy Tools:
+          This section uses saved scoring data from typing/speaking attempts
+          to build a smaller review deck.
+        -->
         <details class="sidebar-section sidebar-accordion">
           <summary class="accordion-summary sidebar-section-summary">
             <span>
@@ -107,6 +169,10 @@
           </summary>
           <div class="sidebar-section-body">
             <div class="section-card">
+              <!--
+                This panel is hidden until at least one scoring tool is enabled.
+                The values here are updated entirely by JavaScript.
+              -->
               <div id="reviewDeckPanel" class="history-panel sidebar-history-panel" hidden>
                 <div class="history-header">
                   <p class="history-title">Missed Lines Review</p>
@@ -120,6 +186,10 @@
                   <p id="reviewDeckCount" class="history-stat">Matching Lines: 0</p>
                   <p id="reviewDeckMode" class="history-stat">Mode: Main deck</p>
                 </div>
+                <!--
+                  Review range:
+                  The user chooses which score band should be turned into a practice deck.
+                -->
                 <div class="checker-mode-row">
                   <label class="typing-label" for="reviewRangeSelect">Practice lines with:</label>
                   <select id="reviewRangeSelect" class="checker-mode-select" aria-label="Choose review range">
@@ -141,12 +211,22 @@
           </div>
         </details>
 
+        <!--
+          Global sidebar action:
+          This clears saved session data without being tied to any one accordion section.
+        -->
         <div class="setup-actions">
           <button id="resetSessionBtn" class="ghost-button" type="button">Reset Saved Session</button>
         </div>
       </aside>
 
+      <!--
+        Rehearsal panel:
+        This is the main practice surface.
+        It shows the current scene, cue, answer line, optional practice tools, and navigation buttons.
+      -->
       <section class="panel rehearsal-panel">
+        <!-- Top status row: current scene/speaker on the left, progress on the right. -->
         <div class="rehearsal-header">
           <div>
             <p id="sceneLabel" class="scene-label">Rehearsal deck</p>
@@ -160,21 +240,29 @@
           </div>
         </div>
 
+        <!--
+          Scene-start banner:
+          Hidden for most cards.
+          JS reveals this only when the current line is the first spoken line in its scene.
+        -->
         <div id="sceneStartBanner" class="scene-start-banner" hidden>
           <p class="scene-start-label">New Scene</p>
           <p id="sceneStartText" class="scene-start-text">This line opens the scene.</p>
         </div>
 
+        <!-- Cue card: shows the previous spoken line that prompts the actor's next line. -->
         <article class="script-card cue-card">
           <p class="card-label">Cue</p>
           <p id="cueSpeaker" class="speaker-tag">Waiting</p>
           <p id="cueText" class="card-copy">Select one or more characters to build your rehearsal deck.</p>
+          <!-- Optional nearby stage direction context. -->
           <div id="stageDirectionBox" class="direction-box" hidden>
             <p class="direction-label">Stage direction</p>
             <p id="stageDirectionText"></p>
           </div>
         </article>
 
+        <!-- Answer card: the actor's own line, hidden by default until revealed. -->
         <article class="script-card line-card">
           <div class="line-card-header">
             <p class="card-label">Your Line</p>
@@ -185,6 +273,11 @@
           </p>
         </article>
 
+        <!--
+          Speaking checker:
+          This is a self-scoring tool, not microphone recognition.
+          The actor speaks aloud, then clicks how accurate the attempt felt.
+        -->
         <article id="speakingCard" class="script-card speaking-card">
           <div class="typing-header">
             <p class="card-label">Speaking Check</p>
@@ -202,6 +295,10 @@
           </div>
         </article>
 
+        <!--
+          Typing checker:
+          The user types the line from memory and asks the app to compare it to the script.
+        -->
         <article id="typingCard" class="script-card typing-card">
           <div class="typing-header">
             <p class="card-label">Typing Practice</p>
@@ -229,12 +326,14 @@
           </div>
         </article>
 
+        <!-- Bottom transport controls for the rehearsal deck. -->
         <div class="button-row">
           <button id="restartBtn" class="ghost-button" type="button">Restart Deck</button>
           <button id="toggleSetupBtn" class="ghost-button" type="button">Hide Menu</button>
           <button id="nextBtn" class="primary-button" type="button">Next Cue</button>
         </div>
 
+        <!-- Keyboard shortcuts are displayed here as a quick reminder. -->
         <p class="keyboard-help">Keyboard shortcuts: <kbd>Space</kbd> reveal or hide, <kbd>Right Arrow</kbd> next cue, <kbd>R</kbd> restart.</p>
       </section>
     </section>
