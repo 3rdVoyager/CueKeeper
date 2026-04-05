@@ -689,12 +689,40 @@ function canonicalizeToken(token) {
     .replace(/^wi'$/g, "we")
     .replace(/^i'$/g, "in")
     .replace(/^o'$/g, "of")
+    .replace(/^an'$/g, "and")
+    .replace(/^ol'$/g, "old")
+    .replace(/^ev'ry$/g, "every")
+    .replace(/^evry$/g, "every")
+    .replace(/^ne?e?r$/g, "never")
     .replace(/^e'en$/g, "even")
     .replace(/^ne'er$/g, "never")
     .replace(/^ha'$/g, "have")
+    .replace(/^'cause$/g, "because")
+    .replace(/^cause$/g, "because")
+    .replace(/^'em$/g, "them")
+    .replace(/^gonna$/g, "going")
+    .replace(/^wanna$/g, "want")
+    .replace(/^gotta$/g, "got")
+    .replace(/^kinda$/g, "kind")
+    .replace(/^outta$/g, "out")
     .replace(/^tis$/g, "tis")
     .replace(/^'tis$/g, "tis")
     .replace(/^'twas$/g, "twas")
+    .replace(/^i'm$/g, "im")
+    .replace(/^you're$/g, "youre")
+    .replace(/^we're$/g, "were")
+    .replace(/^they're$/g, "theyre")
+    .replace(/^can't$/g, "cant")
+    .replace(/^won't$/g, "wont")
+    .replace(/^don't$/g, "dont")
+    .replace(/^didn't$/g, "didnt")
+    .replace(/^doesn't$/g, "doesnt")
+    .replace(/^isn't$/g, "isnt")
+    .replace(/^wasn't$/g, "wasnt")
+    .replace(/^weren't$/g, "werent")
+    .replace(/^wouldn't$/g, "wouldnt")
+    .replace(/^shouldn't$/g, "shouldnt")
+    .replace(/^couldn't$/g, "couldnt")
     .replace(/^they$/g, "thee");
 
   if (normalized.endsWith("'d")) {
@@ -710,6 +738,30 @@ function canonicalizeToken(token) {
   }
 
   return normalized;
+}
+
+function getProgressFeedback(score, progressWordCount, modeLabel = "Close") {
+  if (score >= 97) {
+    return `${modeLabel}: almost exact.`;
+  }
+
+  if (score >= 88) {
+    return `${modeLabel}: very close overall.`;
+  }
+
+  if (score >= 72 && progressWordCount >= 6) {
+    return `${modeLabel}: strong start, then a small drift later.`;
+  }
+
+  if (score >= 55 && progressWordCount >= 3) {
+    return `${modeLabel}: solid opening, but the middle needs another pass.`;
+  }
+
+  if (progressWordCount >= 1) {
+    return `${modeLabel}: you had the opening, but it went off track pretty early.`;
+  }
+
+  return `${modeLabel}: try the opening again.`;
 }
 
 // Split one line into normalized word-like tokens for scoring.
@@ -1098,10 +1150,10 @@ function checkTypedLine() {
     return;
   }
 
-  const typed = normalizeForComparison(dom.typingInput.value);
-  const expected = normalizeForComparison(currentCard.lineText);
   const typedTokens = tokenizeForComparison(dom.typingInput.value);
   const expectedTokens = tokenizeForComparison(currentCard.lineText);
+  const typed = typedTokens.join(" ");
+  const expected = expectedTokens.join(" ");
 
   if (!typed) {
     dom.typingFeedback.textContent = "Type something first, then check your line.";
@@ -1119,8 +1171,8 @@ function checkTypedLine() {
 
   if (appState.checkerMode === "strict") {
     // Strict mode only counts matching words from the opening sequence.
-    const typedWords = typed.split(" ").filter(Boolean);
-    const expectedWords = expected.split(" ").filter(Boolean);
+    const typedWords = typedTokens;
+    const expectedWords = expectedTokens;
     let matchingWords = 0;
 
     for (let index = 0; index < Math.min(typedWords.length, expectedWords.length); index += 1) {
@@ -1135,15 +1187,7 @@ function checkTypedLine() {
       ? 0
       : Math.round((matchingWords / expectedWords.length) * 100);
 
-    if (matchingWords === 0) {
-      dom.typingFeedback.textContent = `Strict mode: about ${strictAccuracy}% matched. Try the opening again.`;
-      if (!recordAccuracy(strictAccuracy, currentCard, typed, "typing")) {
-        dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
-      }
-      return;
-    }
-
-    dom.typingFeedback.textContent = `Strict mode: about ${strictAccuracy}% matched. You were solid through about word ${matchingWords}.`;
+    dom.typingFeedback.textContent = getProgressFeedback(strictAccuracy, matchingWords, "Strict mode");
     if (!recordAccuracy(strictAccuracy, currentCard, typed, "typing")) {
       dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
     }
@@ -1174,15 +1218,7 @@ function checkTypedLine() {
   const accuracy = Math.round(((exactnessScore * 0.45) + (sequenceScore * 0.55)) * lengthPenalty * 100);
   const progressWordCount = mismatchIndex >= 0 ? matchingWords : compareLength;
 
-  if (progressWordCount === 0) {
-    dom.typingFeedback.textContent = `Close: about ${accuracy}% matched. Try the opening again.`;
-    if (!recordAccuracy(accuracy, currentCard, typed, "typing")) {
-      dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
-    }
-    return;
-  }
-
-  dom.typingFeedback.textContent = `Close: about ${accuracy}% matched. You were solid through about word ${progressWordCount}.`;
+  dom.typingFeedback.textContent = getProgressFeedback(accuracy, progressWordCount, "Close");
   if (!recordAccuracy(accuracy, currentCard, typed, "typing")) {
     dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
   }
