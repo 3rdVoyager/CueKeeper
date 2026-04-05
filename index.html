@@ -9,7 +9,10 @@
 <body>
   <main class="app-shell">
     <section class="hero">
-      <p class="eyebrow">CueKeeper</p>
+      <div class="hero-topline">
+        <p class="eyebrow">CueKeeper</p>
+        <button id="themeToggleBtn" class="ghost-button theme-button" type="button">Dark Mode</button>
+      </div>
       <h1>The Two Noble Kinsmen</h1>
       <p class="hero-copy">
         Pick the role or roles you are practicing, read the cue, speak your line out loud or type it,
@@ -20,60 +23,126 @@
     <section id="layout" class="layout">
       <aside id="setupPanel" class="panel setup-panel">
         <div class="panel-heading">
-          <h2>Character Selection</h2>
+          <h2>Practice Setup</h2>
+          <p>Choose roles, tune rehearsal options, and keep your typing progress in one place.</p>
         </div>
 
-        <div class="control-group">
-          <div class="group-label-row">
-            <h3>Cast Presets</h3>
-          </div>
-          <p class="control-copy">Choose an actor to auto-select all of their rehearsal roles.</p>
-          <div class="preset-row">
-            <select id="castPresetSelect" class="preset-select" aria-label="Choose cast preset">
-              <option value="">Select an actor</option>
-            </select>
-            <button id="applyPresetBtn" class="secondary-button" type="button">Apply</button>
-          </div>
-          <p id="presetSummary" class="preset-summary">Manual mode: choose any characters below.</p>
-        </div>
-
-        <details id="manualSelectionDetails" class="control-group accordion-group">
-          <summary class="accordion-summary">
+        <details class="sidebar-section sidebar-accordion">
+          <summary class="accordion-summary sidebar-section-summary">
             <span>
-              <strong>Manual Character Selection</strong>
-              <small id="manualSelectionHint">Show the full role list</small>
+              <strong>Character Selection</strong>
+              <small>Choose a cast preset or open the full role list.</small>
             </span>
             <span class="accordion-icon" aria-hidden="true">+</span>
           </summary>
-          <div class="accordion-content">
-            <div class="group-label-row">
-              <h3>Choose Characters</h3>
-              <div class="tiny-actions">
-                <button id="selectAllBtn" class="ghost-button" type="button">Select All</button>
-                <button id="clearBtn" class="ghost-button" type="button">Clear</button>
+          <div class="sidebar-section-body">
+            <div class="control-group section-card">
+              <div class="group-label-row">
+                <h4>Cast Presets</h4>
               </div>
+              <div class="preset-row">
+                <select id="castPresetSelect" class="preset-select" aria-label="Choose cast preset">
+                  <option value="">Select an actor</option>
+                </select>
+                <button id="applyPresetBtn" class="secondary-button" type="button">Apply</button>
+              </div>
+              <p id="presetSummary" class="preset-summary" hidden></p>
             </div>
-            <div id="characterFilters" class="character-grid"></div>
+
+            <details id="manualSelectionDetails" class="control-group accordion-group section-card">
+              <summary class="accordion-summary">
+                <span>
+                  <strong>Manual Character Selection</strong>
+                  <small id="manualSelectionHint">Show the full role list</small>
+                </span>
+                <span class="accordion-icon" aria-hidden="true">+</span>
+              </summary>
+              <div class="accordion-content">
+                <div class="group-label-row">
+                  <h4>Choose Characters</h4>
+                  <div class="tiny-actions">
+                    <button id="selectAllBtn" class="ghost-button" type="button">Select All</button>
+                    <button id="clearBtn" class="ghost-button" type="button">Clear</button>
+                  </div>
+                </div>
+                <div id="characterFilters" class="character-grid"></div>
+              </div>
+            </details>
           </div>
         </details>
 
-        <div class="control-group">
-          <h3>Practice Options</h3>
-          <label class="toggle-row" for="showDirectionsToggle">
-            <span>Show stage directions for context</span>
-            <input id="showDirectionsToggle" type="checkbox" checked>
-          </label>
-        </div>
+        <details class="sidebar-section sidebar-accordion">
+          <summary class="accordion-summary sidebar-section-summary">
+            <span>
+              <strong>Session Settings</strong>
+              <small>Adjust settings and study modes.</small>
+            </span>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </summary>
+          <div class="sidebar-section-body">
+            <div class="section-card compact-card">
+              <label class="toggle-row" for="showDirectionsToggle">
+                <span>Show stage directions for context</span>
+                <input id="showDirectionsToggle" type="checkbox" checked>
+              </label>
+              <label class="toggle-row" for="speakingPracticeToggle">
+                <span>Enable speaking checker</span>
+                <input id="speakingPracticeToggle" type="checkbox">
+              </label>
+              <label class="toggle-row" for="typingPracticeToggle">
+                <span>Enable typing checker</span>
+                <input id="typingPracticeToggle" type="checkbox">
+              </label>
+            </div>
+          </div>
+        </details>
 
-        <div class="stats-grid">
-          <article class="stat-card">
-            <span class="stat-label">Selected Roles</span>
-            <strong id="selectedRoleCount">0</strong>
-          </article>
-          <article class="stat-card">
-            <span class="stat-label">Total Lines</span>
-            <strong id="lineCount">0</strong>
-          </article>
+        <details class="sidebar-section sidebar-accordion">
+          <summary class="accordion-summary sidebar-section-summary">
+            <span>
+              <strong>Review / Accuracy Tools</strong>
+              <small>Track accuracy and review missed lines.</small>
+            </span>
+            <span class="accordion-icon" aria-hidden="true">+</span>
+          </summary>
+          <div class="sidebar-section-body">
+            <div class="section-card">
+              <div id="reviewDeckPanel" class="history-panel sidebar-history-panel" hidden>
+                <div class="history-header">
+                  <p class="history-title">Missed Lines Review</p>
+                  <button id="clearReviewDeckBtn" class="ghost-button" type="button">Clear Review Deck</button>
+                </div>
+                <div class="history-stats">
+                  <p id="historyAverage" class="history-stat">Session Accuracy: --</p>
+                  <p id="historyCount" class="history-stat">Checks: 0</p>
+                </div>
+                <div class="history-stats">
+                  <p id="reviewDeckCount" class="history-stat">Matching Lines: 0</p>
+                  <p id="reviewDeckMode" class="history-stat">Mode: Main deck</p>
+                </div>
+                <div class="checker-mode-row">
+                  <label class="typing-label" for="reviewRangeSelect">Practice lines with:</label>
+                  <select id="reviewRangeSelect" class="checker-mode-select" aria-label="Choose review range">
+                    <option value="below-75">Below 75%</option>
+                    <option value="below-50">Below 50%</option>
+                    <option value="50-74">50% to 74%</option>
+                    <option value="75-99">75% to 99%</option>
+                    <option value="100">100%</option>
+                    <option value="all">Any saved score</option>
+                  </select>
+                </div>
+                <div class="typing-actions">
+                  <button id="startReviewDeckBtn" class="secondary-button" type="button">Practice Matching Lines</button>
+                  <button id="returnToMainDeckBtn" class="ghost-button" type="button" hidden>Return to Main Deck</button>
+                </div>
+                <p id="reviewDeckHint" class="typing-feedback">Saved checks stay in the background so you can build a review deck from any score range.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <div class="setup-actions">
+          <button id="resetSessionBtn" class="ghost-button" type="button">Reset Saved Session</button>
         </div>
       </aside>
 
@@ -89,10 +158,6 @@
               <div id="progressFill" class="progress-fill"></div>
             </div>
           </div>
-        </div>
-
-        <div class="focus-bar">
-          <button id="toggleSetupBtn" class="ghost-button" type="button">Hide Character Selection Menu</button>
         </div>
 
         <div id="sceneStartBanner" class="scene-start-banner" hidden>
@@ -120,13 +185,26 @@
           </p>
         </article>
 
-        <article class="script-card typing-card">
+        <article id="speakingCard" class="script-card speaking-card">
+          <div class="typing-header">
+            <p class="card-label">Speaking Check</p>
+          </div>
+          <div id="speakingPracticePanel" hidden>
+            <p class="typing-feedback speaking-copy">
+              After speaking the line from memory, mark how close it was.
+            </p>
+            <div class="speaking-actions">
+              <button data-speaking-score="100" class="secondary-button" type="button">Correct</button>
+              <button data-speaking-score="75" class="ghost-button" type="button">Mostly Correct</button>
+              <button data-speaking-score="50" class="ghost-button" type="button">Mostly Incorrect</button>
+              <button data-speaking-score="0" class="ghost-button" type="button">Incorrect</button>
+            </div>
+          </div>
+        </article>
+
+        <article id="typingCard" class="script-card typing-card">
           <div class="typing-header">
             <p class="card-label">Typing Practice</p>
-            <label class="toggle-row typing-toggle" for="typingPracticeToggle">
-              <span>Enable typing checker</span>
-              <input id="typingPracticeToggle" type="checkbox">
-            </label>
           </div>
           <div id="typingPracticePanel" hidden>
             <div class="checker-mode-row">
@@ -148,37 +226,12 @@
               <button id="clearTypingBtn" class="ghost-button" type="button">Clear</button>
             </div>
             <p id="typingFeedback" class="typing-feedback">Typing practice is off.</p>
-            <div id="accuracyHistoryPanel" class="history-panel" hidden>
-              <div class="history-header">
-                <p class="history-title">Accuracy History</p>
-                <button id="clearHistoryBtn" class="ghost-button" type="button">Clear History</button>
-              </div>
-              <div class="history-stats">
-                <p id="historyAverage" class="history-stat">Average: --</p>
-                <p id="historyCount" class="history-stat">Checks: 0</p>
-              </div>
-              <ul id="historyList" class="history-list"></ul>
-            </div>
-            <div id="reviewDeckPanel" class="history-panel" hidden>
-              <div class="history-header">
-                <p class="history-title">Missed Lines Review</p>
-                <button id="clearReviewDeckBtn" class="ghost-button" type="button">Clear Review Deck</button>
-              </div>
-              <div class="history-stats">
-                <p id="reviewDeckCount" class="history-stat">Lines waiting: 0</p>
-                <p id="reviewDeckMode" class="history-stat">Mode: Main deck</p>
-              </div>
-              <div class="typing-actions">
-                <button id="startReviewDeckBtn" class="secondary-button" type="button">Practice Missed Lines</button>
-                <button id="returnToMainDeckBtn" class="ghost-button" type="button" hidden>Return to Main Deck</button>
-              </div>
-              <p id="reviewDeckHint" class="typing-feedback">Low-scoring typed lines will be added here for extra review.</p>
-            </div>
           </div>
         </article>
 
         <div class="button-row">
           <button id="restartBtn" class="ghost-button" type="button">Restart Deck</button>
+          <button id="toggleSetupBtn" class="ghost-button" type="button">Hide Menu</button>
           <button id="nextBtn" class="primary-button" type="button">Next Cue</button>
         </div>
 

@@ -13,9 +13,11 @@ const castPresets = [
 ];
 
 const storageKey = "cuekeeper-session-v1";
+const maxAccuracyHistoryEntries = 200;
 
 const dom = {
   layout: document.getElementById("layout"),
+  themeToggleBtn: document.getElementById("themeToggleBtn"),
   setupPanel: document.getElementById("setupPanel"),
   castPresetSelect: document.getElementById("castPresetSelect"),
   applyPresetBtn: document.getElementById("applyPresetBtn"),
@@ -24,8 +26,7 @@ const dom = {
   manualSelectionHint: document.getElementById("manualSelectionHint"),
   characterFilters: document.getElementById("characterFilters"),
   showDirectionsToggle: document.getElementById("showDirectionsToggle"),
-  selectedRoleCount: document.getElementById("selectedRoleCount"),
-  lineCount: document.getElementById("lineCount"),
+  speakingPracticeToggle: document.getElementById("speakingPracticeToggle"),
   sceneLabel: document.getElementById("sceneLabel"),
   sceneStartBanner: document.getElementById("sceneStartBanner"),
   sceneStartText: document.getElementById("sceneStartText"),
@@ -37,6 +38,9 @@ const dom = {
   stageDirectionBox: document.getElementById("stageDirectionBox"),
   stageDirectionText: document.getElementById("stageDirectionText"),
   lineText: document.getElementById("lineText"),
+  speakingCard: document.getElementById("speakingCard"),
+  speakingPracticePanel: document.getElementById("speakingPracticePanel"),
+  typingCard: document.getElementById("typingCard"),
   typingPracticeToggle: document.getElementById("typingPracticeToggle"),
   typingPracticePanel: document.getElementById("typingPracticePanel"),
   checkerModeSelect: document.getElementById("checkerModeSelect"),
@@ -44,15 +48,13 @@ const dom = {
   checkTypingBtn: document.getElementById("checkTypingBtn"),
   clearTypingBtn: document.getElementById("clearTypingBtn"),
   typingFeedback: document.getElementById("typingFeedback"),
-  accuracyHistoryPanel: document.getElementById("accuracyHistoryPanel"),
-  clearHistoryBtn: document.getElementById("clearHistoryBtn"),
   historyAverage: document.getElementById("historyAverage"),
   historyCount: document.getElementById("historyCount"),
-  historyList: document.getElementById("historyList"),
   reviewDeckPanel: document.getElementById("reviewDeckPanel"),
   clearReviewDeckBtn: document.getElementById("clearReviewDeckBtn"),
   reviewDeckCount: document.getElementById("reviewDeckCount"),
   reviewDeckMode: document.getElementById("reviewDeckMode"),
+  reviewRangeSelect: document.getElementById("reviewRangeSelect"),
   startReviewDeckBtn: document.getElementById("startReviewDeckBtn"),
   returnToMainDeckBtn: document.getElementById("returnToMainDeckBtn"),
   reviewDeckHint: document.getElementById("reviewDeckHint"),
@@ -60,6 +62,7 @@ const dom = {
   nextBtn: document.getElementById("nextBtn"),
   restartBtn: document.getElementById("restartBtn"),
   toggleSetupBtn: document.getElementById("toggleSetupBtn"),
+  resetSessionBtn: document.getElementById("resetSessionBtn"),
   selectAllBtn: document.getElementById("selectAllBtn"),
   clearBtn: document.getElementById("clearBtn")
 };
@@ -68,24 +71,34 @@ const characters = typeof characterDirectory !== "undefined"
   ? [...characterDirectory]
   : getCharacters(scriptEntries);
 
-const appState = {
-  selectedCharacters: [],
-  selectedPresetActor: "",
-  showDirections: true,
-  typingPracticeEnabled: false,
-  checkerMode: "lenient",
-  accuracyHistory: [],
-  reviewDeckIds: [],
-  activeDeckMode: "main",
-  isFocusMode: false,
-  rehearsalDeck: [],
-  currentCardIndex: 0,
-  isLineVisible: false
-};
+function createDefaultState() {
+  return {
+    selectedCharacters: [],
+    selectedPresetActor: "",
+    isDarkMode: false,
+    showDirections: true,
+    speakingPracticeEnabled: false,
+    speakingSelections: {},
+    typingPracticeEnabled: false,
+    checkerMode: "lenient",
+    accuracyHistory: [],
+    reviewRange: "below-75",
+    activeDeckMode: "main",
+    isFocusMode: false,
+    rehearsalDeck: [],
+    currentCardIndex: 0,
+    isLineVisible: false,
+    lastRecordedCheckKey: ""
+  };
+}
+
+const appState = createDefaultState();
 
 dom.showDirectionsToggle.checked = appState.showDirections;
+dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
 dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
 dom.checkerModeSelect.value = appState.checkerMode;
+dom.reviewRangeSelect.value = appState.reviewRange;
 
 function getCharacters(entries) {
   return [...new Set(
@@ -105,15 +118,57 @@ function getPresetByActor(actorName) {
   return castPresets.find((preset) => preset.actor === actorName) ?? null;
 }
 
+function pruneAccuracyHistory(history) {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history.slice(-maxAccuracyHistoryEntries);
+}
+
+function normalizeAccuracyEntry(entry) {
+  if (!entry || typeof entry !== "object" || typeof entry.score !== "number") {
+    return null;
+  }
+
+  const speaker = typeof entry.speaker === "string" ? entry.speaker : "";
+  const scene = typeof entry.scene === "string" ? entry.scene : "";
+  const lineId = typeof entry.lineId === "string" ? entry.lineId : "";
+  const checkerMode = entry.checkerMode === "strict" || entry.checkerMode === "lenient"
+    ? entry.checkerMode
+    : "lenient";
+  const source = entry.source === "speaking" ? "speaking" : "typing";
+  const timestamp = typeof entry.timestamp === "string" && !Number.isNaN(Date.parse(entry.timestamp))
+    ? entry.timestamp
+    : null;
+
+  if (!speaker || !scene) {
+    return null;
+  }
+
+  return {
+    score: Math.max(0, Math.min(100, Math.round(entry.score))),
+    speaker,
+    scene,
+    lineId,
+    checkerMode,
+    source,
+    timestamp: timestamp ?? new Date(0).toISOString()
+  };
+}
+
 function getSerializableState() {
   return {
     selectedCharacters: appState.selectedCharacters,
     selectedPresetActor: appState.selectedPresetActor,
+    isDarkMode: appState.isDarkMode,
     showDirections: appState.showDirections,
+    speakingPracticeEnabled: appState.speakingPracticeEnabled,
+    speakingSelections: appState.speakingSelections,
     typingPracticeEnabled: appState.typingPracticeEnabled,
     checkerMode: appState.checkerMode,
-    accuracyHistory: appState.accuracyHistory,
-    reviewDeckIds: appState.reviewDeckIds,
+    accuracyHistory: pruneAccuracyHistory(appState.accuracyHistory),
+    reviewRange: appState.reviewRange,
     activeDeckMode: appState.activeDeckMode,
     isFocusMode: appState.isFocusMode,
     currentCardIndex: appState.currentCardIndex,
@@ -127,6 +182,10 @@ function saveState() {
 }
 
 function applySavedState(savedState) {
+  const defaultState = createDefaultState();
+  Object.assign(appState, defaultState);
+  dom.manualSelectionDetails.open = false;
+
   if (!savedState || typeof savedState !== "object") {
     return;
   }
@@ -143,6 +202,24 @@ function applySavedState(savedState) {
     appState.showDirections = savedState.showDirections;
   }
 
+  if (typeof savedState.isDarkMode === "boolean") {
+    appState.isDarkMode = savedState.isDarkMode;
+  }
+
+  if (typeof savedState.speakingPracticeEnabled === "boolean") {
+    appState.speakingPracticeEnabled = savedState.speakingPracticeEnabled;
+  }
+
+  if (savedState.speakingSelections && typeof savedState.speakingSelections === "object") {
+    const validScores = new Set(["0", "50", "75", "100"]);
+    const validEntryIds = new Set(scriptEntries.map((entry) => entry.id));
+    appState.speakingSelections = Object.fromEntries(
+      Object.entries(savedState.speakingSelections).filter(([entryId, score]) => (
+        validEntryIds.has(entryId) && validScores.has(String(score))
+      ))
+    );
+  }
+
   if (typeof savedState.typingPracticeEnabled === "boolean") {
     appState.typingPracticeEnabled = savedState.typingPracticeEnabled;
   }
@@ -151,18 +228,23 @@ function applySavedState(savedState) {
     appState.checkerMode = savedState.checkerMode;
   }
 
-  if (Array.isArray(savedState.accuracyHistory)) {
-    appState.accuracyHistory = savedState.accuracyHistory.filter((entry) => (
-      entry &&
-      typeof entry.score === "number" &&
-      typeof entry.speaker === "string" &&
-      typeof entry.scene === "string"
-    ));
+  if (
+    savedState.reviewRange === "below-75" ||
+    savedState.reviewRange === "below-50" ||
+    savedState.reviewRange === "50-74" ||
+    savedState.reviewRange === "75-99" ||
+    savedState.reviewRange === "100" ||
+    savedState.reviewRange === "all"
+  ) {
+    appState.reviewRange = savedState.reviewRange;
   }
 
-  if (Array.isArray(savedState.reviewDeckIds)) {
-    const validEntryIds = new Set(scriptEntries.map((entry) => entry.id));
-    appState.reviewDeckIds = savedState.reviewDeckIds.filter((entryId) => validEntryIds.has(entryId));
+  if (Array.isArray(savedState.accuracyHistory)) {
+    appState.accuracyHistory = pruneAccuracyHistory(
+      savedState.accuracyHistory
+        .map(normalizeAccuracyEntry)
+        .filter(Boolean)
+    );
   }
 
   if (savedState.activeDeckMode === "review" || savedState.activeDeckMode === "main") {
@@ -198,6 +280,86 @@ function loadSavedState() {
   } catch (error) {
     localStorage.removeItem(storageKey);
   }
+}
+
+function clearTransientUi() {
+  dom.typingInput.value = "";
+}
+
+function getReviewableScoresByLine() {
+  const reviewable = new Map();
+
+  appState.accuracyHistory.forEach((entry) => {
+    if (!entry.lineId) {
+      return;
+    }
+
+    const existing = reviewable.get(entry.lineId);
+
+    if (!existing || entry.score < existing.score) {
+      reviewable.set(entry.lineId, entry);
+    }
+  });
+
+  return reviewable;
+}
+
+function scoreMatchesRange(score, range) {
+  if (range === "below-50") {
+    return score < 50;
+  }
+
+  if (range === "50-74") {
+    return score >= 50 && score <= 74;
+  }
+
+  if (range === "75-99") {
+    return score >= 75 && score <= 99;
+  }
+
+  if (range === "100") {
+    return score === 100;
+  }
+
+  if (range === "all") {
+    return true;
+  }
+
+  return score < 75;
+}
+
+function renderAccordionIcons() {
+  document.querySelectorAll("details").forEach((detailsElement) => {
+    const icon = detailsElement.querySelector(":scope > summary .accordion-icon");
+
+    if (!icon) {
+      return;
+    }
+
+    icon.textContent = detailsElement.open ? "-" : "+";
+  });
+}
+
+function renderTheme() {
+  document.body.classList.toggle("theme-dark", appState.isDarkMode);
+  dom.themeToggleBtn.textContent = appState.isDarkMode ? "Light Mode" : "Dark Mode";
+}
+
+function resetSession() {
+  const preservedDarkMode = appState.isDarkMode;
+  Object.assign(appState, createDefaultState());
+  appState.isDarkMode = preservedDarkMode;
+  dom.castPresetSelect.value = "";
+  dom.showDirectionsToggle.checked = appState.showDirections;
+  dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
+  dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
+  dom.checkerModeSelect.value = appState.checkerMode;
+  dom.reviewRangeSelect.value = appState.reviewRange;
+  dom.manualSelectionDetails.open = false;
+  clearTransientUi();
+  localStorage.removeItem(storageKey);
+  renderAccordionIcons();
+  rebuildDeckFromState();
 }
 
 function populatePresetSelect() {
@@ -283,7 +445,11 @@ function buildRehearsalDeck(selectedCharacters) {
 }
 
 function buildReviewDeck() {
-  return appState.reviewDeckIds.flatMap((entryId) => {
+  const reviewableIds = [...getReviewableScoresByLine().values()]
+    .filter((entry) => scoreMatchesRange(entry.score, appState.reviewRange))
+    .map((entry) => entry.lineId);
+
+  return reviewableIds.flatMap((entryId) => {
     const match = scriptEntries.findIndex((entry) => entry.id === entryId);
 
     if (match === -1) {
@@ -354,20 +520,17 @@ function renderCharacterFilters() {
   });
 }
 
-function renderStats() {
-  dom.selectedRoleCount.textContent = appState.selectedCharacters.length.toString();
-  dom.lineCount.textContent = appState.rehearsalDeck.length.toString();
-}
-
 function renderPresetSummary() {
   const selectedPreset = getPresetByActor(appState.selectedPresetActor);
 
   if (!selectedPreset) {
-    dom.presetSummary.textContent = "Manual mode: choose any characters below.";
+    dom.presetSummary.hidden = true;
+    dom.presetSummary.textContent = "";
     return;
   }
 
-  dom.presetSummary.textContent = `${selectedPreset.actor}: ${selectedPreset.roles.join(", ")}`;
+  dom.presetSummary.hidden = false;
+  dom.presetSummary.textContent = `Roles: ${selectedPreset.roles.join(", ")}`;
 }
 
 function renderManualSelectionHint() {
@@ -379,8 +542,8 @@ function renderManualSelectionHint() {
 function renderFocusMode() {
   dom.layout.classList.toggle("is-focused", appState.isFocusMode);
   dom.toggleSetupBtn.textContent = appState.isFocusMode
-    ? "Show Character Selection Menu"
-    : "Hide Character Selection Menu";
+    ? "Show Menu"
+    : "Hide Menu";
 }
 
 function normalizeForComparison(text) {
@@ -499,6 +662,7 @@ function renderTypingPractice() {
   const hasCards = Boolean(currentCard);
 
   dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
+  dom.typingCard.hidden = !appState.typingPracticeEnabled;
   dom.checkerModeSelect.value = appState.checkerMode;
   dom.typingPracticePanel.hidden = !appState.typingPracticeEnabled;
   dom.typingInput.disabled = !appState.typingPracticeEnabled || !hasCards;
@@ -521,23 +685,35 @@ function renderTypingPractice() {
   }
 }
 
+function renderSpeakingPractice() {
+  const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
+  const hasCards = Boolean(currentCard);
+  const selectedScore = currentCard ? String(appState.speakingSelections[currentCard.id] ?? "") : "";
+
+  dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
+  dom.speakingCard.hidden = !appState.speakingPracticeEnabled;
+  dom.speakingPracticePanel.hidden = !appState.speakingPracticeEnabled;
+
+  dom.speakingPracticePanel.querySelectorAll("button[data-speaking-score]").forEach((button) => {
+    button.disabled = !appState.speakingPracticeEnabled || !hasCards;
+    button.classList.toggle("is-selected", button.dataset.speakingScore === selectedScore);
+  });
+}
+
 function renderAccuracyHistory() {
   const history = appState.accuracyHistory;
   const hasHistory = history.length > 0;
-  dom.accuracyHistoryPanel.hidden = !appState.typingPracticeEnabled;
-  dom.historyList.innerHTML = "";
+  const analyticsEnabled = appState.typingPracticeEnabled || appState.speakingPracticeEnabled;
 
-  if (!appState.typingPracticeEnabled) {
+  if (!analyticsEnabled) {
+    dom.historyAverage.textContent = "Session Accuracy: --";
+    dom.historyCount.textContent = "Checks: 0";
     return;
   }
 
   if (!hasHistory) {
-    dom.historyAverage.textContent = "Average: --";
+    dom.historyAverage.textContent = "Session Accuracy: --";
     dom.historyCount.textContent = "Checks: 0";
-    const emptyItem = document.createElement("li");
-    emptyItem.className = "history-item history-empty";
-    emptyItem.textContent = "No typing checks yet this session.";
-    dom.historyList.append(emptyItem);
     return;
   }
 
@@ -545,32 +721,24 @@ function renderAccuracyHistory() {
     history.reduce((total, entry) => total + entry.score, 0) / history.length
   );
 
-  dom.historyAverage.textContent = `Average: ${average}%`;
+  dom.historyAverage.textContent = `Session Accuracy: ${average}%`;
   dom.historyCount.textContent = `Checks: ${history.length}`;
-
-  history
-    .slice(-5)
-    .reverse()
-    .forEach((entry) => {
-      const item = document.createElement("li");
-      item.className = "history-item";
-      item.textContent = `${entry.score}% - ${entry.speaker} (${entry.scene})`;
-      dom.historyList.append(item);
-    });
 }
 
 function renderReviewDeckPanel() {
-  const reviewCount = appState.reviewDeckIds.length;
-  dom.reviewDeckPanel.hidden = !appState.typingPracticeEnabled;
-  dom.reviewDeckCount.textContent = `Lines waiting: ${reviewCount}`;
+  const analyticsEnabled = appState.typingPracticeEnabled || appState.speakingPracticeEnabled;
+  const reviewCount = buildReviewDeck().length;
+  dom.reviewDeckPanel.hidden = !analyticsEnabled;
+  dom.reviewRangeSelect.value = appState.reviewRange;
+  dom.reviewDeckCount.textContent = `Matching Lines: ${reviewCount}`;
   dom.reviewDeckMode.textContent = appState.activeDeckMode === "review"
-    ? "Mode: Missed lines review"
+    ? "Mode: Accuracy review"
     : "Mode: Main deck";
   dom.startReviewDeckBtn.disabled = reviewCount === 0 || appState.activeDeckMode === "review";
   dom.returnToMainDeckBtn.hidden = appState.activeDeckMode !== "review";
   dom.reviewDeckHint.textContent = reviewCount === 0
-    ? "Low-scoring typed lines will be added here for extra review."
-    : "Lines that score below the review threshold are saved here for extra practice.";
+    ? "No saved lines match this range yet."
+    : "Use the selected range to build a focused review deck from saved checks.";
 }
 
 function renderCurrentCard() {
@@ -594,6 +762,7 @@ function renderCurrentCard() {
     dom.revealBtn.disabled = true;
     dom.nextBtn.disabled = true;
     dom.restartBtn.disabled = true;
+    renderSpeakingPractice();
     renderTypingPractice();
     return;
   }
@@ -620,7 +789,7 @@ function renderCurrentCard() {
     dom.lineText.classList.remove("is-hidden");
     dom.revealBtn.textContent = "Hide Line";
   } else {
-    dom.lineText.textContent = "Speak the line from memory. Reveal it after you try.";
+    dom.lineText.textContent = "Speak or type the line from memory. Reveal it after you try.";
     dom.lineText.classList.add("is-hidden");
     dom.revealBtn.textContent = "Reveal Line";
   }
@@ -628,15 +797,17 @@ function renderCurrentCard() {
   dom.revealBtn.disabled = false;
   dom.nextBtn.disabled = appState.currentCardIndex >= appState.rehearsalDeck.length - 1;
   dom.restartBtn.disabled = false;
+  renderSpeakingPractice();
   renderTypingPractice();
 }
 
 function renderApp() {
+  renderTheme();
   renderFocusMode();
   renderCharacterFilters();
   renderPresetSummary();
-  renderStats();
   renderCurrentCard();
+  renderSpeakingPractice();
   renderAccuracyHistory();
   renderReviewDeckPanel();
 }
@@ -647,7 +818,8 @@ function resetDeck() {
     : buildRehearsalDeck(appState.selectedCharacters);
   appState.currentCardIndex = 0;
   appState.isLineVisible = false;
-  dom.typingInput.value = "";
+  appState.lastRecordedCheckKey = "";
+  clearTransientUi();
   renderApp();
   saveState();
 }
@@ -660,6 +832,7 @@ function rebuildDeckFromState() {
   if (appState.rehearsalDeck.length === 0) {
     appState.currentCardIndex = 0;
     appState.isLineVisible = false;
+    appState.lastRecordedCheckKey = "";
   } else if (appState.currentCardIndex > appState.rehearsalDeck.length - 1) {
     appState.currentCardIndex = appState.rehearsalDeck.length - 1;
   }
@@ -698,7 +871,8 @@ function moveToNextCard() {
 
   appState.currentCardIndex += 1;
   appState.isLineVisible = false;
-  dom.typingInput.value = "";
+  appState.lastRecordedCheckKey = "";
+  clearTransientUi();
   renderCurrentCard();
   saveState();
 }
@@ -706,22 +880,64 @@ function moveToNextCard() {
 function restartDeck() {
   appState.currentCardIndex = 0;
   appState.isLineVisible = false;
-  dom.typingInput.value = "";
+  appState.lastRecordedCheckKey = "";
+  clearTransientUi();
   renderCurrentCard();
   saveState();
 }
 
-function recordAccuracy(score, currentCard) {
+function recordAccuracy(score, currentCard, attemptKey, source = "typing") {
+  const checkKey = JSON.stringify({
+    lineId: currentCard.id,
+    source,
+    checkerMode: source === "typing" ? appState.checkerMode : "manual-speaking",
+    attemptKey
+  });
+
+  if (appState.lastRecordedCheckKey === checkKey) {
+    return false;
+  }
+
   appState.accuracyHistory.push({
     score,
     speaker: currentCard.speaker,
-    scene: currentCard.scene
+    scene: currentCard.scene,
+    lineId: currentCard.id,
+    checkerMode: source === "typing" ? appState.checkerMode : "lenient",
+    source,
+    timestamp: new Date().toISOString()
   });
+  appState.accuracyHistory = pruneAccuracyHistory(appState.accuracyHistory);
+  appState.lastRecordedCheckKey = checkKey;
 
-  if (score < 75 && !appState.reviewDeckIds.includes(currentCard.id)) {
-    appState.reviewDeckIds.push(currentCard.id);
+  renderAccuracyHistory();
+  renderReviewDeckPanel();
+  saveState();
+  return true;
+}
+
+function upsertSpeakingAccuracy(score, currentCard) {
+  const existingIndex = appState.accuracyHistory.findIndex((entry) => (
+    entry.source === "speaking" && entry.lineId === currentCard.id
+  ));
+
+  const nextEntry = {
+    score,
+    speaker: currentCard.speaker,
+    scene: currentCard.scene,
+    lineId: currentCard.id,
+    checkerMode: "lenient",
+    source: "speaking",
+    timestamp: new Date().toISOString()
+  };
+
+  if (existingIndex === -1) {
+    appState.accuracyHistory.push(nextEntry);
+  } else {
+    appState.accuracyHistory[existingIndex] = nextEntry;
   }
 
+  appState.accuracyHistory = pruneAccuracyHistory(appState.accuracyHistory);
   renderAccuracyHistory();
   renderReviewDeckPanel();
   saveState();
@@ -746,7 +962,9 @@ function checkTypedLine() {
 
   if (typed === expected) {
     dom.typingFeedback.textContent = "Perfect match. Nice work.";
-    recordAccuracy(100, currentCard);
+    if (!recordAccuracy(100, currentCard, typed, "typing")) {
+      dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
+    }
     return;
   }
 
@@ -769,12 +987,16 @@ function checkTypedLine() {
 
     if (matchingWords === 0) {
       dom.typingFeedback.textContent = `Strict mode: about ${strictAccuracy}% matched. Try the opening again.`;
-      recordAccuracy(strictAccuracy, currentCard);
+      if (!recordAccuracy(strictAccuracy, currentCard, typed, "typing")) {
+        dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
+      }
       return;
     }
 
     dom.typingFeedback.textContent = `Strict mode: about ${strictAccuracy}% matched. You were solid through about word ${matchingWords}.`;
-    recordAccuracy(strictAccuracy, currentCard);
+    if (!recordAccuracy(strictAccuracy, currentCard, typed, "typing")) {
+      dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
+    }
     return;
   }
 
@@ -803,12 +1025,28 @@ function checkTypedLine() {
 
   if (progressWordCount === 0) {
     dom.typingFeedback.textContent = `Close: about ${accuracy}% matched. Try the opening again.`;
-    recordAccuracy(accuracy, currentCard);
+    if (!recordAccuracy(accuracy, currentCard, typed, "typing")) {
+      dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
+    }
     return;
   }
 
   dom.typingFeedback.textContent = `Close: about ${accuracy}% matched. You were solid through about word ${progressWordCount}.`;
-  recordAccuracy(accuracy, currentCard);
+  if (!recordAccuracy(accuracy, currentCard, typed, "typing")) {
+    dom.typingFeedback.textContent = "That exact check is already in your history. Change the line before checking again.";
+  }
+}
+
+function recordSpeakingAttempt(score) {
+  const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
+
+  if (!appState.speakingPracticeEnabled || !currentCard) {
+    return;
+  }
+
+  appState.speakingSelections[currentCard.id] = score;
+  upsertSpeakingAccuracy(score, currentCard);
+  renderSpeakingPractice();
 }
 
 dom.revealBtn.addEventListener("click", toggleLineVisibility);
@@ -817,6 +1055,19 @@ dom.restartBtn.addEventListener("click", restartDeck);
 dom.toggleSetupBtn.addEventListener("click", () => {
   appState.isFocusMode = !appState.isFocusMode;
   renderFocusMode();
+  saveState();
+});
+dom.themeToggleBtn.addEventListener("click", () => {
+  appState.isDarkMode = !appState.isDarkMode;
+  renderTheme();
+  saveState();
+});
+dom.speakingPracticeToggle.addEventListener("change", () => {
+  appState.speakingPracticeEnabled = dom.speakingPracticeToggle.checked;
+  appState.lastRecordedCheckKey = "";
+  renderSpeakingPractice();
+  renderAccuracyHistory();
+  renderReviewDeckPanel();
   saveState();
 });
 dom.typingPracticeToggle.addEventListener("change", () => {
@@ -829,23 +1080,39 @@ dom.typingPracticeToggle.addEventListener("change", () => {
   renderReviewDeckPanel();
   saveState();
 });
+dom.reviewRangeSelect.addEventListener("change", () => {
+  appState.reviewRange = dom.reviewRangeSelect.value;
+
+  if (appState.activeDeckMode === "review") {
+    resetDeck();
+    return;
+  }
+
+  renderReviewDeckPanel();
+  saveState();
+});
+dom.speakingPracticePanel.querySelectorAll("button[data-speaking-score]").forEach((button) => {
+  button.addEventListener("click", () => {
+    recordSpeakingAttempt(Number(button.dataset.speakingScore));
+  });
+});
 dom.checkerModeSelect.addEventListener("change", () => {
   appState.checkerMode = dom.checkerModeSelect.value;
+  appState.lastRecordedCheckKey = "";
   renderTypingPractice();
   saveState();
 });
 dom.checkTypingBtn.addEventListener("click", checkTypedLine);
+dom.typingInput.addEventListener("input", () => {
+  appState.lastRecordedCheckKey = "";
+});
 dom.clearTypingBtn.addEventListener("click", () => {
   dom.typingInput.value = "";
+  appState.lastRecordedCheckKey = "";
   renderTypingPractice();
 });
-dom.clearHistoryBtn.addEventListener("click", () => {
-  appState.accuracyHistory = [];
-  renderAccuracyHistory();
-  saveState();
-});
 dom.startReviewDeckBtn.addEventListener("click", () => {
-  if (appState.reviewDeckIds.length === 0) {
+  if (buildReviewDeck().length === 0) {
     return;
   }
 
@@ -857,7 +1124,9 @@ dom.returnToMainDeckBtn.addEventListener("click", () => {
   resetDeck();
 });
 dom.clearReviewDeckBtn.addEventListener("click", () => {
-  appState.reviewDeckIds = [];
+  appState.accuracyHistory = [];
+  appState.speakingSelections = {};
+  appState.lastRecordedCheckKey = "";
   if (appState.activeDeckMode === "review") {
     appState.activeDeckMode = "main";
     resetDeck();
@@ -867,6 +1136,7 @@ dom.clearReviewDeckBtn.addEventListener("click", () => {
   renderReviewDeckPanel();
   saveState();
 });
+dom.resetSessionBtn.addEventListener("click", resetSession);
 
 dom.applyPresetBtn.addEventListener("click", () => {
   if (!dom.castPresetSelect.value) {
@@ -887,7 +1157,16 @@ dom.castPresetSelect.addEventListener("change", () => {
 
 dom.manualSelectionDetails.addEventListener("toggle", () => {
   renderManualSelectionHint();
+  renderAccordionIcons();
   saveState();
+});
+
+document.querySelectorAll("details").forEach((detailsElement) => {
+  if (detailsElement === dom.manualSelectionDetails) {
+    return;
+  }
+
+  detailsElement.addEventListener("toggle", renderAccordionIcons);
 });
 
 dom.selectAllBtn.addEventListener("click", () => {
@@ -941,8 +1220,11 @@ window.addEventListener("keydown", (event) => {
 populatePresetSelect();
 loadSavedState();
 dom.showDirectionsToggle.checked = appState.showDirections;
+dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
 dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
 dom.checkerModeSelect.value = appState.checkerMode;
+dom.reviewRangeSelect.value = appState.reviewRange;
 dom.castPresetSelect.value = appState.selectedPresetActor;
 renderManualSelectionHint();
+renderAccordionIcons();
 rebuildDeckFromState();

@@ -41,7 +41,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "FIRST QUEEN",
-    "text": "O, Thesus; For pity's sake and true gentility's, Hear and respect me."
+    "text": "O, Theseus, for pity's sake and true gentility's, hear and respect me."
   },
   {
     "id": "tnk-0003",
@@ -118,7 +118,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "THIRD QUEEN",
-    "text": "O, my petition was Set down in ice, which by hot grief uncandied Melts into drops"
+    "text": "O, my petition was set down in ice, which by hot grief uncandied melts into drops."
   },
   {
     "id": "tnk-0014",
@@ -132,7 +132,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "THIRD QUEEN",
-    "text": ". She rises. Lady, lady, alack! He that will all the treasure know o' th' Earth Must know the center too; O, pardon me! Extremity, that sharpens sundry wits, Makes me a fool. The Roman Goddess of war"
+    "text": "She rises. Lady, lady, alack! He that will all the treasure know o' th' Earth must know the center too. O, pardon me! Extremity, that sharpens sundry wits, makes me a fool."
   },
   {
     "id": "tnk-0016",
@@ -146,7 +146,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "THESEUS",
-    "text": ", coming forward Forward to th' temple. Leave not out a jot O' th' sacred ceremony."
+    "text": "(coming forward) Forward to th' temple. Leave not out a jot o' th' sacred ceremony."
   },
   {
     "id": "tnk-0018",
@@ -188,7 +188,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "FIRST QUEEN",
-    "text": "And that work presents itself to th' doing. Now 'twill take form; Now he's secure, Not dreams we stand before your puissance, Rinsing our holy begging in our eyes To make petition clear."
+    "text": "And that work presents itself to th' doing. Now 'twill take form. Now he's secure. Not dreaming, we stand before your puissance, rinsing our holy begging in our eyes to make petition clear."
   },
   {
     "id": "tnk-0024",
@@ -216,7 +216,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "FIRST QUEEN",
-    "text": ", to Second and Third Queens Dowagers, take hands. Let us be widows to our woes. ALL THE QUEENS Farewell."
+    "text": "(to Second and Third Queens) Dowagers, take hands. Let us be widows to our woes. Farewell."
   },
   {
     "id": "tnk-0028",
@@ -237,14 +237,14 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "FIRST QUEEN",
-    "text": "The more proclaiming Our suit shall be neglected when her arms, Able to lock Jove from a synod , shall By warranting moonlight corselet thee. O, when Her twinning cherries shall their sweetness fall Upon thy tasteful lips, what wilt thou think Of rotten kings or blubbered queens?"
+    "text": "The more proclaiming our suit shall be neglected when her arms, able to lock Jove from a synod, shall by warranting moonlight corselet thee. O, when her twinning cherries shall their sweetness fall upon thy tasteful lips, what wilt thou think of rotten kings or blubbered queens?"
   },
   {
     "id": "tnk-0031",
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "HIPPOLYTA",
-    "text": ", to Theseus Though much unlike You should be so transported, yet I think Did I not, by th' abstaining of my joy - Which breeds a deeper longing - cure their surfeit That craves a present med'cine, I should pluck All ladies' scandal on me. She kneels. Prorogue this business we are going about, and hang Your shield afore your heart."
+    "text": "(to Theseus) Though much unlike you should be so transported, yet I think, did I not, by th' abstaining of my joy, which breeds a deeper longing, cure their surfeit that craves a present med'cine, I should pluck all ladies' scandal on me. She kneels. Prorogue this business we are going about, and hang your shield afore your heart."
   },
   {
     "id": "tnk-0032",
@@ -272,7 +272,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "EMILIA",
-    "text": ", to Theseus, kneeling If you grant not My sister her petition, I'll not dare To ask you anything, nor be so hardy Ever to take a husband."
+    "text": "(to Theseus, kneeling) If you grant not my sister her petition, I'll not dare to ask you anything, nor be so hardy ever to take a husband."
   },
   {
     "id": "tnk-0034",
@@ -300,7 +300,7 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 1",
     "type": "line",
     "speaker": "FIRST QUEEN",
-    "text": "Thus dost thou still make good the tongue o' th'world."
+    "text": "Thus dost thou still make good the tongue o' th' world."
   },
   {
     "id": "tnk-0038",
@@ -591,7 +591,13 @@ const scriptEntries = [
     "scene": "ACT 1 Scene 4",
     "type": "line",
     "speaker": "THESEUS",
-    "text": "Go and find out The bones of your dead lords and honor them With treble ceremony; So, adieu, And heaven's good eyes look on you. Queens exit. Enter Artesius and Soldiers bearing Palamon and Arcite on biers. What are those?"
+    "text": "Go and find out the bones of your dead lords and honor them with treble ceremony. So, adieu, and heaven's good eyes look on you. What are those?"
+  },
+  {
+    "id": "tnk-0079a",
+    "scene": "ACT 1 Scene 4",
+    "type": "direction",
+    "text": "Queens exit. Enter Artesius and Soldiers bearing Palamon and Arcite on biers."
   },
   {
     "id": "tnk-0080",
