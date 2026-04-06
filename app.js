@@ -35,7 +35,7 @@ const dom = {
   characterFilters: document.getElementById("characterFilters"),
   sceneFilterSelect: document.getElementById("sceneFilterSelect"),
   showDirectionsToggle: document.getElementById("showDirectionsToggle"),
-  speakingPracticeToggle: document.getElementById("speakingPracticeToggle"),
+  practiceModeSelect: document.getElementById("practiceModeSelect"),
   sceneLabel: document.getElementById("sceneLabel"),
   sceneStartBanner: document.getElementById("sceneStartBanner"),
   sceneStartText: document.getElementById("sceneStartText"),
@@ -50,7 +50,6 @@ const dom = {
   speakingCard: document.getElementById("speakingCard"),
   speakingPracticePanel: document.getElementById("speakingPracticePanel"),
   typingCard: document.getElementById("typingCard"),
-  typingPracticeToggle: document.getElementById("typingPracticeToggle"),
   typingPracticePanel: document.getElementById("typingPracticePanel"),
   checkerModeSelect: document.getElementById("checkerModeSelect"),
   typingInput: document.getElementById("typingInput"),
@@ -67,6 +66,7 @@ const dom = {
   startReviewDeckBtn: document.getElementById("startReviewDeckBtn"),
   returnToMainDeckBtn: document.getElementById("returnToMainDeckBtn"),
   reviewDeckHint: document.getElementById("reviewDeckHint"),
+  markForReviewToggle: document.getElementById("markForReviewToggle"),
   revealBtn: document.getElementById("revealBtn"),
   nextBtn: document.getElementById("nextBtn"),
   restartBtn: document.getElementById("restartBtn"),
@@ -94,12 +94,12 @@ function createDefaultState() {
     isDarkMode: false,
     sceneFilter: "all",
     showDirections: true,
-    speakingPracticeEnabled: false,
+    practiceMode: "off",
     speakingSelections: {},
-    typingPracticeEnabled: false,
     checkerMode: "lenient",
     accuracyHistory: [],
-    reviewRange: "below-75",
+    reviewRange: "under-75",
+    markedLineIds: [],
     activeDeckMode: "main",
     isFocusMode: false,
     rehearsalDeck: [],
@@ -114,8 +114,7 @@ const appState = createDefaultState();
 
 // Keep the form controls in sync with the default state before the first render.
 dom.showDirectionsToggle.checked = appState.showDirections;
-dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
-dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
+dom.practiceModeSelect.value = appState.practiceMode;
 dom.checkerModeSelect.value = appState.checkerMode;
 dom.reviewRangeSelect.value = appState.reviewRange;
 dom.sceneFilterSelect.value = appState.sceneFilter;
@@ -221,12 +220,12 @@ function getSerializableState() {
     isDarkMode: appState.isDarkMode,
     sceneFilter: appState.sceneFilter,
     showDirections: appState.showDirections,
-    speakingPracticeEnabled: appState.speakingPracticeEnabled,
+    practiceMode: appState.practiceMode,
     speakingSelections: appState.speakingSelections,
-    typingPracticeEnabled: appState.typingPracticeEnabled,
     checkerMode: appState.checkerMode,
     accuracyHistory: pruneAccuracyHistory(appState.accuracyHistory),
     reviewRange: appState.reviewRange,
+    markedLineIds: appState.markedLineIds,
     activeDeckMode: appState.activeDeckMode,
     isFocusMode: appState.isFocusMode,
     currentCardIndex: appState.currentCardIndex,
@@ -273,13 +272,23 @@ function applySavedState(savedState) {
     appState.isDarkMode = savedState.isDarkMode;
   }
 
-  if (typeof savedState.speakingPracticeEnabled === "boolean") {
-    appState.speakingPracticeEnabled = savedState.speakingPracticeEnabled;
+  if (
+    savedState.practiceMode === "off" ||
+    savedState.practiceMode === "speaking" ||
+    savedState.practiceMode === "typing"
+  ) {
+    appState.practiceMode = savedState.practiceMode;
+  } else if (typeof savedState.speakingPracticeEnabled === "boolean" || typeof savedState.typingPracticeEnabled === "boolean") {
+    appState.practiceMode = savedState.typingPracticeEnabled
+      ? "typing"
+      : savedState.speakingPracticeEnabled
+        ? "speaking"
+        : "off";
   }
 
   if (savedState.speakingSelections && typeof savedState.speakingSelections === "object") {
-    const validScores = new Set(["0", "50", "75", "100"]);
-    const validEntryIds = new Set(scriptEntries.map((entry) => entry.id));
+    const validScores = new Set(["0", "25", "50", "75", "100"]);
+    const validEntryIds = new Set(activeScriptEntries.map((entry) => entry.id));
     appState.speakingSelections = Object.fromEntries(
       Object.entries(savedState.speakingSelections).filter(([entryId, score]) => (
         validEntryIds.has(entryId) && validScores.has(String(score))
@@ -287,23 +296,28 @@ function applySavedState(savedState) {
     );
   }
 
-  if (typeof savedState.typingPracticeEnabled === "boolean") {
-    appState.typingPracticeEnabled = savedState.typingPracticeEnabled;
-  }
-
   if (savedState.checkerMode === "strict" || savedState.checkerMode === "lenient") {
     appState.checkerMode = savedState.checkerMode;
   }
 
   if (
+    savedState.reviewRange === "under-75" ||
+    savedState.reviewRange === "under-50" ||
+    savedState.reviewRange === "under-25" ||
+    savedState.reviewRange === "marked" ||
     savedState.reviewRange === "below-75" ||
-    savedState.reviewRange === "below-50" ||
-    savedState.reviewRange === "50-74" ||
-    savedState.reviewRange === "75-99" ||
-    savedState.reviewRange === "100" ||
-    savedState.reviewRange === "all"
+    savedState.reviewRange === "below-50"
   ) {
-    appState.reviewRange = savedState.reviewRange;
+    appState.reviewRange = savedState.reviewRange === "below-75"
+      ? "under-75"
+      : savedState.reviewRange === "below-50"
+        ? "under-50"
+        : savedState.reviewRange;
+  }
+
+  if (Array.isArray(savedState.markedLineIds)) {
+    const validEntryIds = new Set(scriptEntries.map((entry) => entry.id));
+    appState.markedLineIds = savedState.markedLineIds.filter((entryId) => validEntryIds.has(entryId));
   }
 
   if (Array.isArray(savedState.accuracyHistory)) {
@@ -376,24 +390,12 @@ function getReviewableScoresByLine() {
 
 // Decide whether one numeric score belongs in the selected review range.
 function scoreMatchesRange(score, range) {
-  if (range === "below-50") {
+  if (range === "under-25") {
+    return score < 25;
+  }
+
+  if (range === "under-50") {
     return score < 50;
-  }
-
-  if (range === "50-74") {
-    return score >= 50 && score <= 74;
-  }
-
-  if (range === "75-99") {
-    return score >= 75 && score <= 99;
-  }
-
-  if (range === "100") {
-    return score === 100;
-  }
-
-  if (range === "all") {
-    return true;
   }
 
   return score < 75;
@@ -425,8 +427,7 @@ function resetSession() {
   appState.isDarkMode = preservedDarkMode;
   dom.castPresetSelect.value = "";
   dom.showDirectionsToggle.checked = appState.showDirections;
-  dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
-  dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
+  dom.practiceModeSelect.value = appState.practiceMode;
   dom.checkerModeSelect.value = appState.checkerMode;
   dom.reviewRangeSelect.value = appState.reviewRange;
   dom.sceneFilterSelect.value = appState.sceneFilter;
@@ -555,9 +556,11 @@ function buildRehearsalDeck(selectedCharacters) {
 
 // Build a smaller deck from saved accuracy results instead of all selected lines.
 function buildReviewDeck() {
-  const reviewableIds = [...getReviewableScoresByLine().values()]
-    .filter((entry) => scoreMatchesRange(entry.score, appState.reviewRange))
-    .map((entry) => entry.lineId);
+  const reviewableIds = appState.reviewRange === "marked"
+    ? [...appState.markedLineIds]
+    : [...getReviewableScoresByLine().values()]
+      .filter((entry) => scoreMatchesRange(entry.score, appState.reviewRange))
+      .map((entry) => entry.lineId);
 
   return reviewableIds.flatMap((entryId) => {
     const match = scriptEntries.findIndex((entry) => entry.id === entryId);
@@ -841,17 +844,18 @@ function getLcsLength(leftTokens, rightTokens) {
 function renderTypingPractice() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
   const hasCards = Boolean(currentCard);
+  const typingEnabled = appState.practiceMode === "typing";
 
-  dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
-  dom.typingCard.hidden = !appState.typingPracticeEnabled;
+  dom.practiceModeSelect.value = appState.practiceMode;
+  dom.typingCard.hidden = !typingEnabled;
   dom.checkerModeSelect.value = appState.checkerMode;
-  dom.typingPracticePanel.hidden = !appState.typingPracticeEnabled;
-  dom.typingInput.disabled = !appState.typingPracticeEnabled || !hasCards;
-  dom.checkTypingBtn.disabled = !appState.typingPracticeEnabled || !hasCards;
-  dom.clearTypingBtn.disabled = !appState.typingPracticeEnabled;
-  dom.checkerModeSelect.disabled = !appState.typingPracticeEnabled;
+  dom.typingPracticePanel.hidden = !typingEnabled;
+  dom.typingInput.disabled = !typingEnabled || !hasCards;
+  dom.checkTypingBtn.disabled = !typingEnabled || !hasCards;
+  dom.clearTypingBtn.disabled = !typingEnabled;
+  dom.checkerModeSelect.disabled = !typingEnabled;
 
-  if (!appState.typingPracticeEnabled) {
+  if (!typingEnabled) {
     dom.typingFeedback.textContent = "Turn this on when you want to type your line and check it.";
     return;
   }
@@ -871,13 +875,14 @@ function renderSpeakingPractice() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
   const hasCards = Boolean(currentCard);
   const selectedScore = currentCard ? String(appState.speakingSelections[currentCard.id] ?? "") : "";
+  const speakingEnabled = appState.practiceMode === "speaking";
 
-  dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
-  dom.speakingCard.hidden = !appState.speakingPracticeEnabled;
-  dom.speakingPracticePanel.hidden = !appState.speakingPracticeEnabled;
+  dom.practiceModeSelect.value = appState.practiceMode;
+  dom.speakingCard.hidden = !speakingEnabled;
+  dom.speakingPracticePanel.hidden = !speakingEnabled;
 
   dom.speakingPracticePanel.querySelectorAll("button[data-speaking-score]").forEach((button) => {
-    button.disabled = !appState.speakingPracticeEnabled || !hasCards;
+    button.disabled = !speakingEnabled || !hasCards;
     button.classList.toggle("is-selected", button.dataset.speakingScore === selectedScore);
   });
 }
@@ -886,7 +891,7 @@ function renderSpeakingPractice() {
 function renderAccuracyHistory() {
   const history = appState.accuracyHistory;
   const hasHistory = history.length > 0;
-  const analyticsEnabled = appState.typingPracticeEnabled || appState.speakingPracticeEnabled;
+  const analyticsEnabled = appState.practiceMode !== "off";
 
   if (!analyticsEnabled) {
     dom.historyAverage.textContent = "Session Accuracy: --";
@@ -910,7 +915,7 @@ function renderAccuracyHistory() {
 
 // Update the review tools area, including how many lines match the chosen score range.
 function renderReviewDeckPanel() {
-  const analyticsEnabled = appState.typingPracticeEnabled || appState.speakingPracticeEnabled;
+  const analyticsEnabled = appState.practiceMode !== "off";
   const reviewCount = buildReviewDeck().length;
   dom.reviewDeckPanel.hidden = !analyticsEnabled;
   dom.reviewRangeSelect.value = appState.reviewRange;
@@ -921,8 +926,12 @@ function renderReviewDeckPanel() {
   dom.startReviewDeckBtn.disabled = reviewCount === 0 || appState.activeDeckMode === "review";
   dom.returnToMainDeckBtn.hidden = appState.activeDeckMode !== "review";
   dom.reviewDeckHint.textContent = reviewCount === 0
-    ? "No saved lines match this range yet."
-    : "Use the selected range to build a focused review deck from saved checks.";
+    ? appState.reviewRange === "marked"
+      ? "No lines are marked for review yet."
+      : "No saved lines match this range yet."
+    : appState.reviewRange === "marked"
+      ? "Use your marked lines set to build a focused manual review deck."
+      : "Use the selected range to build a focused review deck from saved checks.";
 }
 
 // Render the currently active rehearsal card, or the empty-state message if there is no deck yet.
@@ -942,6 +951,8 @@ function renderCurrentCard() {
       : "No rehearsal cards were found for the current selection.";
     dom.sceneStartBanner.hidden = true;
     dom.stageDirectionBox.hidden = true;
+    dom.markForReviewToggle.checked = false;
+    dom.markForReviewToggle.disabled = true;
     dom.lineText.textContent = "Try the line from memory first. Reveal it only when you want to check yourself.";
     dom.lineText.classList.add("is-hidden");
     dom.revealBtn.textContent = "Reveal Line";
@@ -969,6 +980,8 @@ function renderCurrentCard() {
     : "";
   dom.stageDirectionBox.hidden = !shouldShowDirections;
   dom.stageDirectionText.textContent = currentCard.stageDirections.join(" ");
+  dom.markForReviewToggle.disabled = false;
+  dom.markForReviewToggle.checked = appState.markedLineIds.includes(currentCard.id);
 
   if (appState.isLineVisible) {
     // Revealed state: show the exact script line.
@@ -1095,7 +1108,7 @@ function recordAccuracy(score, currentCard, attemptKey, source = "typing") {
     return false;
   }
 
-  appState.accuracyHistory.push({
+  const nextEntry = {
     score,
     speaker: currentCard.speaker,
     scene: currentCard.scene,
@@ -1103,7 +1116,17 @@ function recordAccuracy(score, currentCard, attemptKey, source = "typing") {
     checkerMode: source === "typing" ? appState.checkerMode : "lenient",
     source,
     timestamp: new Date().toISOString()
-  });
+  };
+  const existingIndex = appState.accuracyHistory.findIndex((entry) => (
+    entry.source === source && entry.lineId === currentCard.id
+  ));
+
+  if (existingIndex === -1) {
+    appState.accuracyHistory.push(nextEntry);
+  } else {
+    appState.accuracyHistory[existingIndex] = nextEntry;
+  }
+
   appState.accuracyHistory = pruneAccuracyHistory(appState.accuracyHistory);
   appState.lastRecordedCheckKey = checkKey;
 
@@ -1146,7 +1169,7 @@ function upsertSpeakingAccuracy(score, currentCard) {
 function checkTypedLine() {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
 
-  if (!appState.typingPracticeEnabled || !currentCard) {
+  if (appState.practiceMode !== "typing" || !currentCard) {
     return;
   }
 
@@ -1228,7 +1251,7 @@ function checkTypedLine() {
 function recordSpeakingAttempt(score) {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
 
-  if (!appState.speakingPracticeEnabled || !currentCard) {
+  if (appState.practiceMode !== "speaking" || !currentCard) {
     return;
   }
 
@@ -1250,19 +1273,13 @@ dom.themeToggleBtn.addEventListener("click", () => {
   renderTheme();
   saveState();
 });
-dom.speakingPracticeToggle.addEventListener("change", () => {
-  appState.speakingPracticeEnabled = dom.speakingPracticeToggle.checked;
+dom.practiceModeSelect.addEventListener("change", () => {
+  appState.practiceMode = dom.practiceModeSelect.value;
   appState.lastRecordedCheckKey = "";
-  renderSpeakingPractice();
-  renderAccuracyHistory();
-  renderReviewDeckPanel();
-  saveState();
-});
-dom.typingPracticeToggle.addEventListener("change", () => {
-  appState.typingPracticeEnabled = dom.typingPracticeToggle.checked;
-  if (!appState.typingPracticeEnabled) {
+  if (appState.practiceMode !== "typing") {
     dom.typingInput.value = "";
   }
+  renderSpeakingPractice();
   renderTypingPractice();
   renderAccuracyHistory();
   renderReviewDeckPanel();
@@ -1304,6 +1321,24 @@ dom.clearTypingBtn.addEventListener("click", () => {
   appState.lastRecordedCheckKey = "";
   renderTypingPractice();
 });
+dom.markForReviewToggle.addEventListener("change", () => {
+  const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
+
+  if (!currentCard) {
+    return;
+  }
+
+  if (dom.markForReviewToggle.checked) {
+    if (!appState.markedLineIds.includes(currentCard.id)) {
+      appState.markedLineIds = [...appState.markedLineIds, currentCard.id];
+    }
+  } else {
+    appState.markedLineIds = appState.markedLineIds.filter((entryId) => entryId !== currentCard.id);
+  }
+
+  renderReviewDeckPanel();
+  saveState();
+});
 dom.startReviewDeckBtn.addEventListener("click", () => {
   if (buildReviewDeck().length === 0) {
     return;
@@ -1319,6 +1354,7 @@ dom.returnToMainDeckBtn.addEventListener("click", () => {
 dom.clearReviewDeckBtn.addEventListener("click", () => {
   appState.accuracyHistory = [];
   appState.speakingSelections = {};
+  appState.markedLineIds = [];
   appState.lastRecordedCheckKey = "";
   if (appState.activeDeckMode === "review") {
     appState.activeDeckMode = "main";
@@ -1414,8 +1450,7 @@ populatePresetSelect();
 populateSceneFilterSelect();
 loadSavedState();
 dom.showDirectionsToggle.checked = appState.showDirections;
-dom.speakingPracticeToggle.checked = appState.speakingPracticeEnabled;
-dom.typingPracticeToggle.checked = appState.typingPracticeEnabled;
+dom.practiceModeSelect.value = appState.practiceMode;
 dom.checkerModeSelect.value = appState.checkerMode;
 dom.reviewRangeSelect.value = appState.reviewRange;
 dom.sceneFilterSelect.value = appState.sceneFilter;

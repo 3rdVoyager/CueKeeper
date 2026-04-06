@@ -517,6 +517,12 @@ body.theme-dark .panel::after {
   gap: 14px;
 }
 
+.script-card-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
 .scene-start-banner {
   position: relative;
   z-index: 1;
@@ -959,6 +965,10 @@ body.theme-dark kbd {
 
   h1 {
     max-width: 14ch;
+  }
+
+  .script-card-grid {
+    grid-template-columns: 1fr;
   }
 }
 

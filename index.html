@@ -142,14 +142,14 @@
                 <span>Show stage directions for context</span>
                 <input id="showDirectionsToggle" type="checkbox" checked>
               </label>
-              <label class="toggle-row" for="speakingPracticeToggle">
-                <span>Enable speaking checker</span>
-                <input id="speakingPracticeToggle" type="checkbox">
-              </label>
-              <label class="toggle-row" for="typingPracticeToggle">
-                <span>Enable typing checker</span>
-                <input id="typingPracticeToggle" type="checkbox">
-              </label>
+              <div class="filter-row">
+                <label class="typing-label" for="practiceModeSelect">Practice mode</label>
+                <select id="practiceModeSelect" class="checker-mode-select" aria-label="Choose practice mode">
+                  <option value="off">Off</option>
+                  <option value="speaking">Speaking checker</option>
+                  <option value="typing">Typing checker</option>
+                </select>
+              </div>
             </div>
           </div>
         </details>
@@ -193,12 +193,10 @@
                 <div class="checker-mode-row">
                   <label class="typing-label" for="reviewRangeSelect">Practice lines with:</label>
                   <select id="reviewRangeSelect" class="checker-mode-select" aria-label="Choose review range">
-                    <option value="below-75">Below 75%</option>
-                    <option value="below-50">Below 50%</option>
-                    <option value="50-74">50% to 74%</option>
-                    <option value="75-99">75% to 99%</option>
-                    <option value="100">100%</option>
-                    <option value="all">Any saved score</option>
+                    <option value="under-75">Under 75%</option>
+                    <option value="under-50">Under 50%</option>
+                    <option value="under-25">Under 25%</option>
+                    <option value="marked">All marked lines</option>
                   </select>
                 </div>
                 <div class="typing-actions">
@@ -250,28 +248,34 @@
           <p id="sceneStartText" class="scene-start-text">This line opens the scene.</p>
         </div>
 
-        <!-- Cue card: shows the previous spoken line that prompts the actor's next line. -->
-        <article class="script-card cue-card">
-          <p class="card-label">Cue</p>
-          <p id="cueSpeaker" class="speaker-tag">Waiting</p>
-          <p id="cueText" class="card-copy">Select one or more characters to build your rehearsal deck.</p>
-          <!-- Optional nearby stage direction context. -->
-          <div id="stageDirectionBox" class="direction-box" hidden>
-            <p class="direction-label">Stage direction</p>
-            <p id="stageDirectionText"></p>
-          </div>
-        </article>
+        <div class="script-card-grid">
+          <!-- Cue card: shows the previous spoken line that prompts the actor's next line. -->
+          <article class="script-card cue-card">
+            <p class="card-label">Cue</p>
+            <p id="cueSpeaker" class="speaker-tag">Waiting</p>
+            <p id="cueText" class="card-copy">Select one or more characters to build your rehearsal deck.</p>
+            <!-- Optional nearby stage direction context. -->
+            <div id="stageDirectionBox" class="direction-box" hidden>
+              <p class="direction-label">Stage direction</p>
+              <p id="stageDirectionText"></p>
+            </div>
+          </article>
 
-        <!-- Answer card: the actor's own line, hidden by default until revealed. -->
-        <article class="script-card line-card">
-          <div class="line-card-header">
-            <p class="card-label">Your Line</p>
-            <button id="revealBtn" class="secondary-button" type="button">Reveal Line</button>
-          </div>
-          <p id="lineText" class="line-text is-hidden">
-            Try the line from memory. Reveal it when you want to check yourself.
-          </p>
-        </article>
+          <!-- Answer card: the actor's own line, hidden by default until revealed. -->
+          <article class="script-card line-card">
+            <div class="line-card-header">
+              <p class="card-label">Your Line</p>
+              <button id="revealBtn" class="secondary-button" type="button">Reveal Line</button>
+            </div>
+            <label class="toggle-row line-mark-toggle" for="markForReviewToggle">
+              <span>Mark this line for review</span>
+              <input id="markForReviewToggle" type="checkbox">
+            </label>
+            <p id="lineText" class="line-text is-hidden">
+              Try the line from memory. Reveal it when you want to check yourself.
+            </p>
+          </article>
+        </div>
 
         <!--
           Speaking checker:
@@ -287,10 +291,11 @@
               After speaking the line from memory, mark how close it was.
             </p>
             <div class="speaking-actions">
-              <button data-speaking-score="100" class="secondary-button" type="button">Correct</button>
-              <button data-speaking-score="75" class="ghost-button" type="button">Mostly Correct</button>
-              <button data-speaking-score="50" class="ghost-button" type="button">Mostly Incorrect</button>
-              <button data-speaking-score="0" class="ghost-button" type="button">Incorrect</button>
+              <button data-speaking-score="100" class="secondary-button" type="button">100%</button>
+              <button data-speaking-score="75" class="ghost-button" type="button">75%</button>
+              <button data-speaking-score="50" class="ghost-button" type="button">50%</button>
+              <button data-speaking-score="25" class="ghost-button" type="button">25%</button>
+              <button data-speaking-score="0" class="ghost-button" type="button">0%</button>
             </div>
           </div>
         </article>
