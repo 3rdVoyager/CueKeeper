@@ -951,7 +951,9 @@ function renderCurrentCard() {
       : "No rehearsal cards were found for the current selection.";
     dom.sceneStartBanner.hidden = true;
     dom.stageDirectionBox.hidden = true;
-    dom.markForReviewToggle.checked = false;
+    dom.markForReviewToggle.classList.remove("is-selected");
+    dom.markForReviewToggle.setAttribute("aria-pressed", "false");
+    dom.markForReviewToggle.textContent = "Mark for Review";
     dom.markForReviewToggle.disabled = true;
     dom.lineText.textContent = "Try the line from memory first. Reveal it only when you want to check yourself.";
     dom.lineText.classList.add("is-hidden");
@@ -980,8 +982,11 @@ function renderCurrentCard() {
     : "";
   dom.stageDirectionBox.hidden = !shouldShowDirections;
   dom.stageDirectionText.textContent = currentCard.stageDirections.join(" ");
+  const isMarkedForReview = appState.markedLineIds.includes(currentCard.id);
   dom.markForReviewToggle.disabled = false;
-  dom.markForReviewToggle.checked = appState.markedLineIds.includes(currentCard.id);
+  dom.markForReviewToggle.classList.toggle("is-selected", isMarkedForReview);
+  dom.markForReviewToggle.setAttribute("aria-pressed", isMarkedForReview ? "true" : "false");
+  dom.markForReviewToggle.textContent = isMarkedForReview ? "Marked for Review" : "Mark for Review";
 
   if (appState.isLineVisible) {
     // Revealed state: show the exact script line.
@@ -1321,14 +1326,16 @@ dom.clearTypingBtn.addEventListener("click", () => {
   appState.lastRecordedCheckKey = "";
   renderTypingPractice();
 });
-dom.markForReviewToggle.addEventListener("change", () => {
+dom.markForReviewToggle.addEventListener("click", () => {
   const currentCard = appState.rehearsalDeck[appState.currentCardIndex];
 
   if (!currentCard) {
     return;
   }
 
-  if (dom.markForReviewToggle.checked) {
+  const isCurrentlyMarked = appState.markedLineIds.includes(currentCard.id);
+
+  if (!isCurrentlyMarked) {
     if (!appState.markedLineIds.includes(currentCard.id)) {
       appState.markedLineIds = [...appState.markedLineIds, currentCard.id];
     }
@@ -1336,6 +1343,7 @@ dom.markForReviewToggle.addEventListener("change", () => {
     appState.markedLineIds = appState.markedLineIds.filter((entryId) => entryId !== currentCard.id);
   }
 
+  renderCurrentCard();
   renderReviewDeckPanel();
   saveState();
 });

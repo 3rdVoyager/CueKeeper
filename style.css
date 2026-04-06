@@ -940,7 +940,23 @@ body.theme-dark .script-card {
 }
 
 .button-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   margin-top: 4px;
+}
+
+.review-mark-button.is-selected {
+  border-color: rgba(197, 155, 83, 0.4);
+  background: linear-gradient(180deg, rgba(236, 213, 162, 0.96), rgba(223, 189, 121, 0.96));
+  color: #5a4020;
+}
+
+body.theme-dark .review-mark-button.is-selected {
+  border-color: rgba(214, 178, 110, 0.34);
+  background: linear-gradient(180deg, rgba(86, 70, 36, 0.98), rgba(111, 87, 39, 0.98));
+  color: #f6eedb;
 }
 
 kbd {
